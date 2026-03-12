@@ -1,4 +1,30 @@
 ---
+# /dev/kmsg is required by kubelet but not present in LXC containers
+- name: Create /dev/kmsg symlink
+  file:
+    src: /dev/console
+    dest: /dev/kmsg
+    state: link
+    force: yes
+
+# Make /dev/kmsg persistent across reboots
+- name: Create /etc/rc.local for /dev/kmsg persistence
+  copy:
+    content: |
+      #!/bin/bash
+      ln -sf /dev/console /dev/kmsg
+      exit 0
+    dest: /etc/rc.local
+    mode: '0755'
+
+# Enable root password login for Ansible access
+- name: Enable PermitRootLogin
+  copy:
+    content: "PermitRootLogin yes\n"
+    dest: /etc/ssh/sshd_config.d/99-permit-root.conf
+    mode: '0644'
+  notify: restart sshd
+
 - name: Update apt package cache
   apt:
     update_cache: yes
@@ -8,12 +34,6 @@
   apt:
     upgrade: safe
 
-# nfs-common   -> provides mount.nfs, needed for PersistentVolumes backed by NFS
-# fuse-overlayfs -> user-space overlay filesystem, used by containerd inside LXC
-#                  (kernel overlay module is not available inside Proxmox LXC)
-# socat        -> TCP relay tool, required by k3s for kubectl port-forward
-# curl         -> needed to download the k3s install script
-# ca-certificates, apt-transport-https -> needed for HTTPS apt repos
 - name: Install required packages
   apt:
     name:

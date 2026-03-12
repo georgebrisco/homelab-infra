@@ -22,8 +22,20 @@
         state: present
       loop: "{{ k3s_container_ids }}"
 
+    - name: Set kernel parameters required by k3s on PVE host
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-k3s.conf
+        reload: yes
+        state: present
+      loop:
+        - { key: "vm.overcommit_memory", value: "1" }
+        - { key: "kernel.panic", value: "10" }
+        - { key: "kernel.panic_on_oops", value: "1" }
+
     - name: Stop containers
-      command: "pct stop {{ item }} "
+      command: "pct stop {{ item }}"
       loop: "{{ k3s_container_ids }}"
       ignore_errors: yes
 
@@ -44,4 +56,3 @@
     - name: Wait for containers to boot
       pause:
         seconds: 15
-
