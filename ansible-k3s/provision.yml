@@ -1,0 +1,85 @@
+---
+# ---------------------------------------------------------------------------
+# Play 1: Modify LXC container configs on the Proxmox HOST.
+#
+# k3s needs kernel features that Proxmox LXC restricts by default:
+#   - lxc.apparmor.profile: unconfined  -> removes security restrictions on system calls
+#   - lxc.cgroup.devices.allow: a       -> lets containerd access all devices
+#   - lxc.cap.drop:                     -> prevents dropping Linux capabilities
+# These are written to /etc/pve/lxc/<id>.conf, then the containers restart.
+# ---------------------------------------------------------------------------
+- name: Prepare LXC containers on Proxmox host
+  hosts: proxmox_host
+  gather_facts: no
+  roles:
+    - lxc-prep
+
+# ---------------------------------------------------------------------------
+# Play 2: Wait for the three k3s containers to become reachable over SSH.
+# After the lxc-prep reboot they need ~15s to come back up.
+# ---------------------------------------------------------------------------
+- name: Wait for k3s nodes to come online
+  hosts: k3s_cluster
+  gather_facts: no
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        timeout: 120
+        sleep: 5
+
+# ---------------------------------------------------------------------------
+# Play 3: Install base system packages on all three k3s nodes.
+# nfs-common  -> needed to mount NFS volumes (for the NFS storage provisioner)
+# fuse-overlayfs -> user-space overlay filesystem used by containerd inside LXC
+# socat       -> required by k3s for port-forwarding
+# ---------------------------------------------------------------------------
+- name: Install base packages on all k3s nodes
+  hosts: k3s_cluster
+  roles:
+    - base
+
+# ---------------------------------------------------------------------------
+# Play 4: Install k3s in server (control plane) mode on CT 113.
+# This installs the k3s binary which contains: API server, etcd, scheduler,
+# controller manager, and the containerd runtime. After this play:
+#   - kubectl works from the server (KUBECONFIG=/etc/rancher/k3s/k3s.yaml)
+#   - The kubeconfig is also copied to ~/.kube/config on this manager machine
+#   - k3s_token fact is set (used by the next play to join agents)
+# ---------------------------------------------------------------------------
+- name: Install k3s server (control plane)
+  hosts: k3s_server
+  roles:
+    - k3s-server
+
+# ---------------------------------------------------------------------------
+# Play 5: Install k3s in agent mode on CT 114 and CT 115.
+# Agents join the cluster using the token read from the server in Play 4.
+# Each agent runs: kubelet (manages pods on this node) + containerd.
+# ---------------------------------------------------------------------------
+- name: Install k3s agents (worker nodes)
+  hosts: k3s_agents
+  roles:
+    - k3s-agent
+
+# ---------------------------------------------------------------------------
+# Play 6: Deploy the NFS storage provisioner to the cluster.
+# This uses k3s's built-in Helm controller: we drop a HelmChart manifest into
+# /var/lib/rancher/k3s/server/manifests/ and k3s automatically installs it.
+# Result: a StorageClass called "nfs-client" that auto-provisions PVs on TrueNAS.
+# PREREQUISITE: /mnt/MainPool/local_data/k8s must exist on TrueNAS (192.168.50.44)
+# ---------------------------------------------------------------------------
+- name: Configure NFS storage provisioner
+  hosts: k3s_server
+  roles:
+    - nfs-storage
+
+# ---------------------------------------------------------------------------
+# Play 7: Ensure ~/.kube/ exists on the manager.
+# (The kubeconfig itself was already written in Play 4 by the k3s-server role.)
+# After this play you can run kubectl from the manager: kubectl get nodes
+# ---------------------------------------------------------------------------
+- name: Ensure kubeconfig directory on manager
+  hosts: localhost
+  connection: local
+  roles:
+    - kubeconfig

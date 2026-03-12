@@ -1,0 +1,59 @@
+---
+# Fetch current DHCP reservations so we can diff against desired state.
+# Endpoint: GET setting/service/dhcp  (not setting/lan/dhcpBinding — that's Omada <5.x)
+- name: Get existing DHCP reservations
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/service/dhcp?token={{ omada_token }}&currentPage=1&currentPageSize=200"
+    method: GET
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    return_content: true
+  register: existing_reservations
+
+- name: Build list of existing MACs (normalised to uppercase with dashes)
+  set_fact:
+    existing_macs: "{{ existing_reservations.json.result.data
+                       | default([])
+                       | map(attribute='mac')
+                       | map('upper')
+                       | list }}"
+
+# Create any reservation that isn't already present (idempotent by MAC).
+# MAC format in the Omada 5.x API is uppercase with dashes: BC-24-11-3B-8E-78
+- name: Create missing DHCP reservations
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/service/dhcp?token={{ omada_token }}"
+    method: POST
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    body_format: json
+    body:
+      netId:  "{{ omada_netId }}"
+      mac:    "{{ item.mac | upper | regex_replace(':', '-') }}"
+      ip:     "{{ item.ip }}"
+      status: true
+      exportToIpMacBinding: true
+    status_code: 200
+    return_content: true
+  loop: "{{ dhcp_reservations }}"
+  when: item.mac | upper | regex_replace(':', '-') not in existing_macs
+  loop_control:
+    label: "{{ item.name }} ({{ item.ip }})"
+
+# Warn about reservations present in controller but not in our vars file.
+# We never auto-delete — removal requires an explicit action.
+- name: Warn about unmanaged DHCP reservations
+  debug:
+    msg: >
+      WARNING: Reservation in Omada not in vars:
+      {{ item.mac | lower }} → {{ item.ip }} ({{ item.clientName | default('unnamed') }}).
+      Add it to group_vars/all/main.yml or remove it manually.
+  loop: "{{ existing_reservations.json.result.data | default([]) }}"
+  when: item.mac | upper | regex_replace(':', '-') not in
+        (dhcp_reservations | map(attribute='mac') | map('upper') | map('regex_replace', ':', '-') | list)
+  loop_control:
+    label: "{{ item.mac }}"

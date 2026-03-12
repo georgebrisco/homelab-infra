@@ -1,0 +1,147 @@
+---
+# ---------------------------------------------------------------------------
+# Omada controller connection
+# ---------------------------------------------------------------------------
+omada_url: "https://192.168.50.27:8043"
+omada_site_name: "Country Club"     # Omada site name
+omada_lan_name:  "Default"          # LAN network name (used to resolve netId)
+omada_validate_certs: false         # controller uses a self-signed cert
+
+# ---------------------------------------------------------------------------
+# DHCP Reservations — all managed devices
+# ---------------------------------------------------------------------------
+# EVERY device with a known MAC should have a reservation here, even those
+# still running static IPs in Proxmox.  This ensures correct addresses when
+# containers are later switched to ip=dhcp.
+#
+# Layout:
+#   .1          router (static on device, no reservation needed)
+#   .2          AdGuard Home CT 116 (static in Proxmox — critical infra)
+#   .3          Asus XT8 ZenWiFi WAP
+#   .10–.16     Proxmox containers (various)
+#   .20–.31     Proxmox containers (various)
+#   .32         Linksys IoT router
+#   .33–.39     spare reserved block
+#   .40–.240    dynamic DHCP pool
+#
+# MAC format: colons or dashes, any case — the playbook normalises to
+# uppercase dashes before sending to the Omada API.
+# ---------------------------------------------------------------------------
+
+dhcp_reservations:
+
+  # ── Critical infrastructure ──────────────────────────────────────────────
+
+  - name: adguard             # CT 116 — stays static in Proxmox at .2, but
+    mac: "bc:24:11:c0:12:80"  #   reservation ensures belt-and-suspenders safety
+    ip: "192.168.50.2"
+
+  - name: xt8-wap             # Asus XT8 ZenWiFi wireless access point
+    mac: "7c:10:c9:e4:a9:90"
+    ip: "192.168.50.3"
+
+  # ── Non-Proxmox / physical devices ──────────────────────────────────────
+
+  - name: steam               # Proxmox host — main bridge NIC (enp2s0/vmbr0)
+    mac: "58:47:ca:77:85:fd"
+    ip: "192.168.50.12"
+
+  - name: homeassistant       # Pi Yellow (CM4) — Home Assistant + MQTT broker
+    mac: "d8:3a:dd:cd:a8:b6"
+    ip: "192.168.50.11"
+
+  - name: truenas             # TrueNAS VM 102 — DHCP (lost static config)
+    mac: "bc:24:11:00:35:85"
+    ip: "192.168.50.44"
+
+  - name: linksys-iot         # Linksys WRT3200ACM — WAN port on 192.168.50.x
+    mac: "60:38:e0:d0:65:78"  # WAN MAC (connects to ER707-M2 LAN)
+    ip: "192.168.50.32"       # LAN side of Linksys is 192.168.20.1
+
+  # ── Proxmox LXC containers — already on ip=dhcp ─────────────────────────
+
+  - name: manager             # CT 107 — Ansible/Terraform runner
+    mac: "bc:24:11:3b:8e:78"
+    ip: "192.168.50.28"
+
+  - name: photoprism          # CT 100
+    mac: "bc:24:11:41:b4:81"
+    ip: "192.168.50.29"
+
+  - name: jupyter             # CT 105
+    mac: "bc:24:11:aa:3d:c4"
+    ip: "192.168.50.30"
+
+  - name: inference           # CT 106
+    mac: "bc:24:11:7e:0a:16"
+    ip: "192.168.50.31"
+
+  # ── Proxmox LXC containers — currently static, migrating to DHCP ────────
+
+  - name: ocsirb-web          # CT 110
+    mac: "bc:24:11:35:82:27"
+    ip: "192.168.50.10"
+
+  - name: ocsirb-staging      # CT 112
+    mac: "bc:24:11:4d:6b:56"
+    ip: "192.168.50.13"
+
+  - name: k3s-server          # CT 113
+    mac: "bc:24:11:e0:a0:17"
+    ip: "192.168.50.14"
+
+  - name: k3s-agent-1         # CT 114
+    mac: "bc:24:11:be:d2:fd"
+    ip: "192.168.50.15"
+
+  - name: k3s-agent-2         # CT 115
+    mac: "bc:24:11:0c:fe:63"
+    ip: "192.168.50.16"
+
+  - name: immich              # CT 111
+    mac: "bc:24:11:f8:2a:48"
+    ip: "192.168.50.20"
+
+  - name: preview-site        # CT 922
+    mac: "bc:24:11:12:08:02"
+    ip: "192.168.50.22"
+
+  - name: devbox              # CT 104
+    mac: "bc:24:11:d9:29:3d"
+    ip: "192.168.50.23"
+
+  - name: production-site     # CT 997
+    mac: "bc:24:11:7b:e6:88"
+    ip: "192.168.50.24"
+
+  - name: monitoring          # CT 103
+    mac: "bc:24:11:25:bf:da"
+    ip: "192.168.50.25"
+
+  - name: uptime-kuma         # CT 108
+    mac: "bc:24:11:10:23:0c"
+    ip: "192.168.50.26"
+
+  - name: omada               # CT 109 — switch to DHCP LAST (hosts Omada controller)
+    mac: "bc:24:11:f6:9b:27"
+    ip: "192.168.50.27"
+
+# ---------------------------------------------------------------------------
+# LAN DNS Servers — advertised to DHCP clients
+# ---------------------------------------------------------------------------
+# NOTE: Update lan_primary_dns to 192.168.50.2 AFTER AdGuard migration
+lan_primary_dns:   "192.168.50.2"   # AdGuard Home (CT 116) — migrated to .2
+lan_secondary_dns: "1.1.1.1"         # Cloudflare fallback if AdGuard is down
+
+# ---------------------------------------------------------------------------
+# Static Routes — managed on the ER707-M2 via Omada controller API
+# ---------------------------------------------------------------------------
+
+static_routes:
+
+  - name: iot-subnet            # Route 192.168.20.x IoT traffic to Linksys WAN port
+    destinations:
+      - "192.168.20.0/24"
+    next_hop: "192.168.50.32"   # Linksys WAN IP (DHCP reservation above)
+    metric: 0
+    status: true

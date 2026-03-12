@@ -1,0 +1,11 @@
+---
+- name: Logout of Omada controller
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/users/logout"
+    method: POST
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    return_content: true
+  when: omada_token is defined

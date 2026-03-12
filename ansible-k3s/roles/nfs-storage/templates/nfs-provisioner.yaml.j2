@@ -1,0 +1,15 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: nfs-subdir-external-provisioner
+  namespace: kube-system
+spec:
+  repo: https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+  chart: nfs-subdir-external-provisioner
+  targetNamespace: kube-system
+  set:
+    nfs.server: "{{ nfs_server }}"
+    nfs.path: "{{ nfs_path }}"
+    storageClass.name: "nfs-client"
+    storageClass.defaultClass: "false"
+    storageClass.reclaimPolicy: "Retain"

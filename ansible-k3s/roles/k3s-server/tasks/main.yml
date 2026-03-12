@@ -1,0 +1,92 @@
+---
+# Create the k3s config directory before the installer runs.
+# k3s reads /etc/rancher/k3s/config.yaml automatically at install time.
+- name: Create /etc/rancher/k3s directory
+  file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+# Write the server config before installing k3s.
+# Key settings:
+#   write-kubeconfig-mode: "0644"  -> makes kubeconfig world-readable on the node
+#   snapshotter: fuse-overlayfs    -> use user-space overlay fs (works in LXC)
+#   node-name                      -> explicit node name in the cluster
+#   cluster-init: true             -> initialises a new etcd cluster (first server node)
+- name: Write k3s server config
+  template:
+    src: k3s-config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0644'
+
+- name: Check if k3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+# Download and run the official k3s install script.
+# The script detects the system architecture, downloads the right binary,
+# creates a systemd service, and starts it.
+# If k3s_version is empty, the latest stable version is installed.
+- name: Install k3s server
+  shell: >
+    curl -sfL https://get.k3s.io |
+    {% if k3s_version != "" %}INSTALL_K3S_VERSION="{{ k3s_version }}"{% endif %}
+    sh -
+  args:
+    executable: /bin/bash
+  when: not k3s_binary.stat.exists
+  timeout: 300
+
+# Poll systemctl until k3s is fully active.
+# Using 'command' + 'until' is more reliable than the systemd module for this.
+- name: Wait for k3s service to be active
+  command: systemctl is-active k3s
+  register: k3s_active
+  until: k3s_active.rc == 0
+  retries: 24
+  delay: 5
+  changed_when: false
+
+# Poll kubectl until the server node shows status Ready.
+# The node goes through: NotReady -> Ready as CNI (Flannel) initialises.
+# KUBECONFIG must be set explicitly because we are running as root but the
+# file lives at /etc/rancher/k3s/k3s.yaml not ~/.kube/config (not yet copied).
+- name: Wait for server node to be Ready
+  command: >
+    kubectl get node k3s-server --no-headers
+  register: node_ready
+  until: "'Ready' in node_ready.stdout and 'NotReady' not in node_ready.stdout"
+  retries: 36
+  delay: 5
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+# Read the cluster join token. Agents use this to authenticate when joining.
+# The token is a long random string stored by k3s at this well-known path.
+- name: Read k3s node token
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: token_raw
+
+# Store the token as a host fact so the k3s-agent role can read it via
+# hostvars['k3s-server']['k3s_token'] in the next play.
+- name: Set k3s_token fact
+  set_fact:
+    k3s_token: "{{ token_raw.content | b64decode | trim }}"
+
+# Fetch the kubeconfig from the server and write it to the manager.
+# Replace 127.0.0.1 with the server's actual LAN IP so kubectl works remotely.
+- name: Read kubeconfig from server
+  slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: kubeconfig_raw
+
+- name: Write kubeconfig to manager ~/.kube/config
+  copy:
+    content: "{{ (kubeconfig_raw.content | b64decode) | replace('127.0.0.1', k3s_server_ip) }}"
+    dest: /root/.kube/config
+    mode: '0600'
+  delegate_to: localhost
+  become: false

@@ -1,0 +1,47 @@
+---
+- name: Configure LXC containers for K3S
+  block:
+    - name: Add apparmor.profile unconfined to LXC configs
+      lineinfile:
+        path: "/etc/pve/lxc/{{ item }}.conf"
+        line: "lxc.apparmor.profile: unconfined"
+        state: present
+      loop: "{{ k3s_container_ids }}"
+
+    - name: Add cgroup devices allow to LXC configs
+      lineinfile:
+        path: "/etc/pve/lxc/{{ item }}.conf"
+        line: "lxc.cgroup.devices.allow: a"
+        state: present
+      loop: "{{ k3s_container_ids }}"
+
+    - name: Add cap drop to LXC configs
+      lineinfile:
+        path: "/etc/pve/lxc/{{ item }}.conf"
+        line: "lxc.cap.drop:"
+        state: present
+      loop: "{{ k3s_container_ids }}"
+
+    - name: Stop containers
+      command: "pct stop {{ item }} "
+      loop: "{{ k3s_container_ids }}"
+      ignore_errors: yes
+
+    - name: Wait for containers to stop
+      command: "pct status {{ item }}"
+      loop: "{{ k3s_container_ids }}"
+      register: ct_status
+      until: "'stopped' in ct_status.stdout"
+      retries: 12
+      delay: 5
+      ignore_errors: yes
+
+    - name: Start containers
+      command: "pct start {{ item }}"
+      loop: "{{ k3s_container_ids }}"
+      ignore_errors: yes
+
+    - name: Wait for containers to boot
+      pause:
+        seconds: 15
+

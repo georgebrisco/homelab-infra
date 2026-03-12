@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-prices
+  namespace: portfolio
+  labels:
+    app: portfolio
+    component: stock-prices
+spec:
+  # Number of replicas
+  replicas: 1
+  
+  # Label selector to match pods
+  selector:
+    matchLabels:
+      app: portfolio
+      component: stock-prices
+  
+  # Pod template specification
+  template:
+    metadata:
+      labels:
+        app: portfolio
+        component: stock-prices
+    spec:
+      # Restart policy for pods
+      restartPolicy: Always
+      
+      containers:
+        # Main container running the stock prices script
+        - name: stock-prices
+          # Container image - IMPORTANT: Replace with your built Docker image
+          # Build process:
+          # 1. Clone portfolio repo to local machine
+          # 2. Create Dockerfile in the repo root
+          # 3. Run: docker build -t your-registry/portfolio-prices:latest .
+          # 4. Push: docker push your-registry/portfolio-prices:latest
+          image: your-registry/portfolio-prices:latest
+          
+          # Image pull policy
+          imagePullPolicy: IfNotPresent
+          
+          # Resource requests and limits
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          
+          # Environment variables for the application
+          env:
+            # Path to SQLite database
+            - name: DB_PATH
+              value: /data/portfolio.db
+            
+            # K3S API server for potential future integrations
+            - name: K3S_API_SERVER
+              value: "https://192.168.50.14:6443"
+          
+          # Volume mounts for persistent storage
+          volumeMounts:
+            # Mount the NFS-backed PVC for database storage
+            - name: portfolio-data
+              mountPath: /data
+      
+      # Volumes definition
+      volumes:
+        # NFS-backed persistent volume via PVC
+        - name: portfolio-data
+          persistentVolumeClaim:
+            claimName: portfolio-db-pvc
+      
+      # Pod scheduling constraints (optional)
+      # affinity:
+      #   podAntiAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #       - weight: 100
+      #         podAffinityTerm:
+      #           labelSelector:
+      #             matchExpressions:
+      #               - key: app
+      #                 operator: In
+      #                 values:
+      #                   - portfolio
+      #           topologyKey: kubernetes.io/hostname

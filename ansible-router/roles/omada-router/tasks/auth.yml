@@ -1,0 +1,71 @@
+---
+# Step 1: Discover the controller's omadacId (required for all API calls)
+- name: Get Omada controller info
+  uri:
+    url: "{{ omada_url }}/api/info"
+    method: GET
+    validate_certs: "{{ omada_validate_certs }}"
+    return_content: true
+  register: omada_info
+
+- name: Set omadacId fact
+  set_fact:
+    omadacId: "{{ omada_info.json.result.omadacId }}"
+
+# Step 2: Login — Omada 5.x uses /api/v2/login (not /api/v2/users/login)
+#          Username is the account email address, password is plain text.
+- name: Login to Omada controller
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/login"
+    method: POST
+    validate_certs: "{{ omada_validate_certs }}"
+    body_format: json
+    body:
+      username: "{{ omada_username }}"
+      password: "{{ omada_password }}"
+    return_content: true
+  register: omada_login
+
+- name: Set session token facts
+  set_fact:
+    omada_token: "{{ omada_login.json.result.token }}"
+    omada_session_cookie: "TPOMADA_SESSIONID={{ omada_login.cookies['TPOMADA_SESSIONID'] }}"
+
+# Step 3: Get current user info — contains the site ID directly
+#         Avoids the broken /api/v2/sites list endpoint in 5.15.x
+- name: Get current user info (to resolve siteId)
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/users/current?token={{ omada_token }}"
+    method: GET
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    return_content: true
+  register: omada_current_user
+
+- name: Set siteId and netId facts
+  set_fact:
+    omada_siteId: "{{ omada_current_user.json.result.privilege.sites
+                      | selectattr('name', 'equalto', omada_site_name)
+                      | map(attribute='key')
+                      | first }}"
+
+# Step 4: Get the Default LAN network ID (needed for DHCP reservation POST)
+- name: Get LAN network interfaces
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/lan/networks/interface?token={{ omada_token }}&currentPage=1&currentPageSize=10"
+    method: GET
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    return_content: true
+  register: omada_networks
+
+- name: Set netId fact (Default LAN network)
+  set_fact:
+    omada_netId: "{{ omada_networks.json.result.data
+                     | selectattr('name', 'equalto', omada_lan_name)
+                     | map(attribute='id')
+                     | first }}"

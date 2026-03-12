@@ -1,0 +1,15 @@
+---
+- name: Authenticate with Omada controller
+  import_tasks: auth.yml
+
+- name: Configure DHCP reservations
+  import_tasks: dhcp_reservations.yml
+
+- name: Configure static routes
+  import_tasks: static_routes.yml
+
+- name: Configure LAN DNS servers
+  import_tasks: dns_servers.yml
+
+- name: Logout of Omada controller
+  import_tasks: logout.yml

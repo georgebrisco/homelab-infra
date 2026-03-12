@@ -1,0 +1,54 @@
+---
+# k3s has a built-in Helm controller that watches a special directory:
+#   /var/lib/rancher/k3s/server/manifests/
+# Any YAML file placed there is automatically applied to the cluster.
+# This includes a custom resource type called HelmChart (helm.cattle.io/v1)
+# which tells k3s to install a Helm chart. We use this to install the
+# NFS subdir external provisioner without needing Helm installed separately.
+#
+# PREREQUISITE: the directory /mnt/MainPool/local_data/k8s must exist on
+# TrueNAS (192.168.50.44) before this role runs. Create it with:
+#   mkdir -p /mnt/MainPool/local_data/k8s (on the TrueNAS shell)
+- name: Remind about NFS prerequisite
+  debug:
+    msg: >
+      PREREQUISITE: /mnt/MainPool/local_data/k8s must exist on TrueNAS
+      (192.168.50.44). SSH to TrueNAS and run: mkdir -p /mnt/MainPool/local_data/k8s
+
+- name: Ensure k3s manifests directory exists
+  file:
+    path: /var/lib/rancher/k3s/server/manifests
+    state: directory
+    mode: '0755'
+
+- name: Deploy NFS provisioner HelmChart manifest
+  template:
+    src: nfs-provisioner.yaml.j2
+    dest: /var/lib/rancher/k3s/server/manifests/nfs-provisioner.yaml
+    mode: '0644'
+
+# Wait until k3s has processed the HelmChart resource. k3s polls the manifests
+# directory every 5 seconds, so this usually takes under a minute.
+- name: Wait for HelmChart resource to appear
+  command: >
+    kubectl get helmchart nfs-subdir-external-provisioner -n kube-system
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: hc_result
+  until: hc_result.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+
+# Wait until the provisioner Deployment is up and running.
+- name: Wait for NFS provisioner Deployment to be ready
+  command: >
+    kubectl rollout status deployment/nfs-subdir-external-provisioner
+    -n kube-system --timeout=120s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: rollout
+  until: rollout.rc == 0
+  retries: 15
+  delay: 15
+  changed_when: false

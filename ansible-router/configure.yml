@@ -1,0 +1,18 @@
+---
+# Run from the manager (CT 107, 192.168.50.99)
+# This playbook runs entirely on localhost — all Omada config is sent via
+# the controller's REST API, no SSH connection to the router needed.
+#
+# Usage:
+#   ansible-playbook configure.yml -i inventory.ini
+#
+# Dry-run (check mode not fully supported for uri tasks, but --diff shows vars):
+#   ansible-playbook configure.yml -i inventory.ini --check
+
+- name: Configure TP-Link ER707-M2 via Omada Controller API
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  roles:
+    - role: omada-router

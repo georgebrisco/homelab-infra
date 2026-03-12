@@ -1,0 +1,34 @@
+---
+- name: Update apt package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  apt:
+    upgrade: safe
+
+# nfs-common   -> provides mount.nfs, needed for PersistentVolumes backed by NFS
+# fuse-overlayfs -> user-space overlay filesystem, used by containerd inside LXC
+#                  (kernel overlay module is not available inside Proxmox LXC)
+# socat        -> TCP relay tool, required by k3s for kubectl port-forward
+# curl         -> needed to download the k3s install script
+# ca-certificates, apt-transport-https -> needed for HTTPS apt repos
+- name: Install required packages
+  apt:
+    name:
+      - curl
+      - wget
+      - nfs-common
+      - socat
+      - fuse-overlayfs
+      - ca-certificates
+      - apt-transport-https
+      - gnupg
+      - lsb-release
+      - open-iscsi
+    state: present
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC

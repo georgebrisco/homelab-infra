@@ -1,0 +1,13 @@
+[proxmox_host]
+steam ansible_host=192.168.50.12 ansible_user=root ansible_ssh_pass=CHANGEME ansible_ssh_common_args="-o StrictHostKeyChecking=no"
+
+[k3s_server]
+k3s-server ansible_host=192.168.50.14
+
+[k3s_agents]
+k3s-agent-1 ansible_host=192.168.50.15
+k3s-agent-2 ansible_host=192.168.50.16
+
+[k3s_cluster:children]
+k3s_server
+k3s_agents

@@ -1,0 +1,7 @@
+---
+- name: Ensure .kube directory exists
+  file:
+    path: /root/.kube
+    state: directory
+    mode: '0700'
+  become: no

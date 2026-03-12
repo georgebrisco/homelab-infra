@@ -1,0 +1,48 @@
+---
+- name: Get existing static routes
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/transmission/staticRoutings?token={{ omada_token }}&currentPage=1&currentPageSize=100"
+    method: GET
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    return_content: true
+  register: existing_routes
+
+- name: Build list of existing route names
+  set_fact:
+    existing_route_names: "{{ existing_routes.json.result.data
+                               | default([])
+                               | map(attribute='name')
+                               | list }}"
+
+- name: Create missing static routes
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/transmission/staticRoutings?token={{ omada_token }}"
+    method: POST
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    body_format: json
+    body:
+      name:         "{{ item.name }}"
+      status:       "{{ item.status }}"
+      destinations: "{{ item.destinations }}"
+      routeType:    0
+      nextHopIp:    "{{ item.next_hop }}"
+      metric:       "{{ item.metric }}"
+    status_code: [200]
+    return_content: true
+  loop: "{{ static_routes }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.destinations | join(', ') }} → {{ item.next_hop }})"
+  when: item.name not in existing_route_names
+  register: route_results
+
+- name: Report created routes
+  debug:
+    msg: "Created route '{{ item.item.name }}': {{ item.json.msg }}"
+  loop: "{{ route_results.results }}"
+  when: not item.skipped | default(false)

@@ -1,0 +1,40 @@
+---
+# Set DNS servers advertised to DHCP clients on the Default LAN.
+# Re-uses the omada_networks data already fetched in auth.yml — no extra GET needed.
+
+- name: Find Default LAN network object
+  set_fact:
+    lan_network: "{{ omada_networks.json.result.data
+                     | selectattr('name', 'equalto', omada_lan_name)
+                     | first }}"
+
+- name: Set current DNS fact
+  set_fact:
+    current_primary_dns: "{{ lan_network.primaryDns | default('') }}"
+
+- name: DNS servers already correct — skip update
+  debug:
+    msg: "DNS already set to {{ current_primary_dns }} — no change needed."
+  when: current_primary_dns == lan_primary_dns
+
+# PATCH the LAN network with updated DNS fields merged into the full existing object.
+# Omada requires the complete network body — we merge our changes into the existing config.
+- name: Update LAN DNS servers to point at AdGuard Home
+  uri:
+    url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/lan/networks/{{ omada_netId }}?token={{ omada_token }}"
+    method: PATCH
+    validate_certs: "{{ omada_validate_certs }}"
+    headers:
+      Cookie: "{{ omada_session_cookie }}"
+      Csrf-Token: "{{ omada_token }}"
+    body_format: json
+    body: "{{ lan_network | combine({'primaryDns': lan_primary_dns, 'secondaryDns': lan_secondary_dns}) }}"
+    status_code: 200
+    return_content: true
+  when: current_primary_dns != lan_primary_dns
+  register: dns_update
+
+- name: Confirm DNS update applied
+  debug:
+    msg: "DNS updated — primary: {{ lan_primary_dns }}, secondary: {{ lan_secondary_dns }}"
+  when: dns_update is changed

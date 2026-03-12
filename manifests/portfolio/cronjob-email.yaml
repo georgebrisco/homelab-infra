@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: portfolio-email
+  namespace: portfolio
+  labels:
+    app: portfolio
+    component: email-sender
+spec:
+  # Cron schedule: 5 PM - 9 PM on weekdays (Monday-Friday)
+  # Format: minute hour day month day-of-week
+  schedule: "5 14-21 * * 1-5"
+  
+  # Number of successful job history to keep
+  successfulJobsHistoryLimit: 3
+  
+  # Number of failed job history to keep
+  failedJobsHistoryLimit: 3
+  
+  # ConcurrencyPolicy: how to handle concurrent runs
+  concurrencyPolicy: Forbid
+  
+  # Job specification
+  jobTemplate:
+    spec:
+      # Job backoff limit
+      backoffLimit: 2
+      
+      # Pod template
+      template:
+        metadata:
+          labels:
+            app: portfolio
+            component: email-sender
+        spec:
+          # Do not restart the pod on completion
+          restartPolicy: Never
+          
+          # Service account (if needed for K3S access)
+          serviceAccountName: default
+          
+          containers:
+            # Email sender container
+            - name: email-sender
+              # Container image - IMPORTANT: Replace with your built Docker image
+              # Use the same image as the stock-prices deployment
+              image: your-registry/portfolio-prices:latest
+              
+              # Command to run when container starts
+              command:
+                - python
+                - send_pnl_email.py
+              
+              # Image pull policy
+              imagePullPolicy: IfNotPresent
+              
+              # Resource requests and limits
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              
+              # Environment variables
+              env:
+                # Path to SQLite database
+                - name: DB_PATH
+                  value: /data/portfolio.db
+                
+                # K3S API server
+                - name: K3S_API_SERVER
+                  value: "https://192.168.50.14:6443"
+              
+              # Volume mounts
+              volumeMounts:
+                # Database storage (NFS-backed PVC)
+                - name: portfolio-data
+                  mountPath: /data
+                
+                # Email configuration secret
+                - name: email-config
+                  mountPath: /etc/portfolio
+                  readOnly: true
+          
+          # Volumes definition
+          volumes:
+            # Persistent data volume
+            - name: portfolio-data
+              persistentVolumeClaim:
+                claimName: portfolio-db-pvc
+            
+            # Email configuration from Secret
+            - name: email-config
+              secret:
+                secretName: portfolio-email-config
+                defaultMode: 0400
