@@ -1,0 +1,34 @@
+---
+# Deploy cloudflared to tunnel containers
+#
+# Installs cloudflared, configures it with the tunnel token from Terraform,
+# and enables the systemd service.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-tunnel/configure.yml
+
+- name: Deploy cloudflared to tunnel hosts
+  hosts: tunnel_hosts
+  gather_facts: true
+
+  vars:
+    # Map container hostname → Terraform tunnel key
+    tunnel_token_map:
+      ocsirb-staging: ocsirb_staging
+      preview-site: tbs_preview
+      production-site: tbs_production
+
+  pre_tasks:
+    - name: Load tunnel tokens from Terraform
+      set_fact:
+        tunnel_tokens: "{{ lookup('pipe', 'terraform -chdir=/root/projects/homelab-infra output -json cloudflare_tunnel_tokens') | from_json }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Resolve this host tunnel token
+      set_fact:
+        cloudflared_token: "{{ tunnel_tokens[tunnel_token_map[inventory_hostname]] }}"
+
+  roles:
+    - role: cloudflared

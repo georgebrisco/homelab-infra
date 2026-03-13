@@ -1,0 +1,74 @@
+---
+# Install and configure cloudflared with a tunnel token
+
+- name: Check if cloudflared is installed
+  stat:
+    path: /usr/local/bin/cloudflared
+  register: cloudflared_binary
+
+- name: Get installed cloudflared version
+  command: cloudflared --version
+  register: cloudflared_installed_version
+  changed_when: false
+  when: cloudflared_binary.stat.exists
+
+- name: Get latest cloudflared release version
+  uri:
+    url: https://api.github.com/repos/cloudflare/cloudflared/releases/latest
+    return_content: true
+  register: cloudflared_latest
+  delegate_to: localhost
+  run_once: true
+  failed_when: false
+
+- name: Set cloudflared download URL
+  set_fact:
+    cloudflared_url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+
+- name: Download cloudflared
+  get_url:
+    url: "{{ cloudflared_url }}"
+    dest: /usr/local/bin/cloudflared
+    mode: "0755"
+    force: "{{ not cloudflared_binary.stat.exists }}"
+  register: cloudflared_downloaded
+
+- name: Create cloudflared systemd service
+  copy:
+    content: |
+      [Unit]
+      Description=cloudflared
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      TimeoutStartSec=15
+      Type=notify
+      ExecStart=/usr/local/bin/cloudflared --no-autoupdate tunnel run --token {{ cloudflared_token }}
+      Restart=on-failure
+      RestartSec=5s
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/cloudflared.service
+    mode: "0644"
+  register: cloudflared_service
+
+- name: Reload systemd if service changed
+  systemd:
+    daemon_reload: true
+  when: cloudflared_service.changed
+
+- name: Enable and start cloudflared
+  systemd:
+    name: cloudflared
+    enabled: true
+    state: "{{ 'restarted' if cloudflared_service.changed or cloudflared_downloaded.changed else 'started' }}"
+
+- name: Wait for cloudflared to be active
+  command: systemctl is-active cloudflared
+  register: cf_active
+  until: cf_active.rc == 0
+  retries: 6
+  delay: 5
+  changed_when: false

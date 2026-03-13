@@ -62,3 +62,13 @@ output "dns_servers" {
   description = "DNS server list used by containers"
   value       = local.dns_servers_default
 }
+
+output "cloudflare_tunnel_tokens" {
+  description = "Tunnel tokens for cloudflared (sensitive)"
+  sensitive   = true
+  value = {
+    ocsirb_staging = cloudflare_zero_trust_tunnel_cloudflared.ocsirb_staging.tunnel_token
+    tbs_preview    = cloudflare_zero_trust_tunnel_cloudflared.tbs_preview.tunnel_token
+    tbs_production = cloudflare_zero_trust_tunnel_cloudflared.tbs_production.tunnel_token
+  }
+}
