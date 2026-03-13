@@ -1,7 +1,9 @@
 ---
 # Deploy common baseline services to all managed hosts
 #
-# Currently: node_exporter (Prometheus metrics on :9100)
+# Roles:
+#   - admin-user:    Create admin user with SSH key + passwordless sudo
+#   - node-exporter: Prometheus metrics on :9100
 #
 # Usage:
 #   cd /root/projects/homelab-infra
@@ -12,11 +14,14 @@
   gather_facts: true
 
   roles:
+    - role: admin-user
     - role: node-exporter
 
 - name: Deploy baseline services to physical devices
   hosts: physical_devices
   gather_facts: true
+  become: true
 
   roles:
+    - role: admin-user
     - role: node-exporter

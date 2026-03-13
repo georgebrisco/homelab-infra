@@ -1,0 +1,7 @@
+---
+# admin-user role defaults
+
+admin_username: admin
+admin_shell: /bin/bash
+admin_ssh_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp george@IvorTheEngine"
+admin_sudoers_file: "/etc/sudoers.d/{{ admin_username }}"

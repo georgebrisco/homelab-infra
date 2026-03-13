@@ -1,0 +1,111 @@
+---
+# Create an 'admin' user with SSH key auth and passwordless sudo.
+#
+# Works on:
+#   - Debian/Ubuntu LXC containers (all 17)
+#   - Proxmox host (Debian)
+#   - TrueNAS SCALE (Debian — apt blocked, sudoers has no @includedir)
+#   - Gardener Pi (Debian)
+#   - Home Assistant OS (Alpine — wheel group for sudo, AllowUsers for SSH)
+
+# --- Detect OS family ---
+- name: Detect Alpine (Home Assistant OS)
+  set_fact:
+    is_alpine: "{{ ansible_os_family == 'Alpine' or (ansible_distribution | default('')) == 'Alpine' }}"
+
+# --- Detect TrueNAS (no @includedir in sudoers) ---
+- name: Check for @includedir in sudoers
+  command: grep -c '@includedir\|#includedir' /etc/sudoers
+  register: sudoers_includedir
+  changed_when: false
+  failed_when: false
+  become: true
+  when: not is_alpine
+
+# --- Create user ---
+- name: Create admin user
+  user:
+    name: "{{ admin_username }}"
+    shell: "{{ '/bin/ash' if is_alpine else admin_shell }}"
+    create_home: true
+    state: present
+  become: true
+
+# --- SSH key ---
+- name: Deploy manager SSH key for admin user
+  authorized_key:
+    user: "{{ admin_username }}"
+    key: "{{ admin_ssh_pubkey }}"
+    state: present
+    exclusive: false
+  become: true
+
+# --- SSH: Alpine/HA — add admin to AllowUsers if sshd restricts it ---
+- name: Check if sshd_config restricts AllowUsers
+  command: grep -c '^AllowUsers' /etc/ssh/sshd_config
+  register: sshd_allowusers
+  changed_when: false
+  failed_when: false
+  become: true
+  when: is_alpine
+
+- name: Add admin to AllowUsers in sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^AllowUsers'
+    line: "AllowUsers hassio {{ admin_username }}"
+    validate: "sshd -t -f %s"
+  become: true
+  when: is_alpine and sshd_allowusers.rc == 0 and sshd_allowusers.stdout | int > 0
+  notify: restart sshd
+
+# --- Sudo: Debian/Ubuntu (sudoers.d drop-in) ---
+- name: Check if sudo is installed
+  command: which sudo
+  register: sudo_check
+  changed_when: false
+  failed_when: false
+  when: not is_alpine
+
+- name: Install sudo package (Debian — skip if apt is broken or blocked)
+  apt:
+    name: sudo
+    state: present
+  become: true
+  when: not is_alpine and ansible_pkg_mgr == 'apt' and sudo_check.rc != 0
+  register: sudo_install
+  failed_when: false
+
+- name: Warn if sudo could not be installed
+  debug:
+    msg: "WARNING: sudo not available and could not be installed on {{ inventory_hostname }}. Admin user will not have sudo."
+  when: not is_alpine and sudo_check.rc != 0 and (sudo_install is defined and sudo_install.rc is defined and sudo_install.rc != 0)
+
+# Hosts with @includedir: use drop-in file (standard Debian/Ubuntu)
+- name: Create sudoers drop-in for admin
+  copy:
+    content: "{{ admin_username }} ALL=(ALL:ALL) NOPASSWD: ALL\n"
+    dest: "{{ admin_sudoers_file }}"
+    mode: "0440"
+    validate: "visudo -cf %s"
+  become: true
+  when: not is_alpine and sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int > 0
+
+# Hosts without @includedir (e.g. TrueNAS): add directly to /etc/sudoers
+- name: Add admin to /etc/sudoers directly (no includedir)
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '^{{ admin_username }}\s'
+    line: "{{ admin_username }} ALL=(ALL:ALL) NOPASSWD: ALL"
+    validate: "visudo -cf %s"
+  become: true
+  when: not is_alpine and sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int == 0
+
+# --- Sudo: Alpine (add to wheel group, which already has NOPASSWD) ---
+- name: Add admin to wheel group (Alpine / HA OS)
+  user:
+    name: "{{ admin_username }}"
+    groups: wheel
+    append: true
+  become: true
+  when: is_alpine

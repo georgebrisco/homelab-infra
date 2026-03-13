@@ -1,0 +1,6 @@
+---
+# HA uses s6, not systemd. Other hosts may not need sshd restart for this role.
+- name: restart sshd
+  command: kill -HUP $(cat /var/run/sshd.pid 2>/dev/null || pgrep -x sshd | head -1)
+  become: true
+  failed_when: false
