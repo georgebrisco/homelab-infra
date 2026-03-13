@@ -237,6 +237,49 @@ HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 11. **lxc-prep role uses hardcoded k3s_container_ids**: Should derive from inventory group membership (k3s_cluster group) instead. Fix when k3s playbook is next run with dynamic inventory.
 12. **Legacy ansible-k3s/inventory.ini**: Still exists (gitignored). Delete once dynamic inventory is confirmed working with k3s playbook.
 
+## Roadmap
+
+### Phase 3 — Reproducibility (in progress)
+
+Completed:
+- 3.0: SSH key deployment to all containers + Proxmox host
+- 3.1: cloudflared role (convention-based: tunnel resource name = container key)
+- 3.2: node_exporter baseline on all 17 containers (:9100)
+- 3.3: Prometheus + Grafana monitoring stack (scrape targets from inventory)
+
+Remaining:
+- **3.4: Uptime Kuma role** — Install and configure Uptime Kuma on the uptime_kuma_hosts group. Low complexity; likely a Docker or direct install with a systemd unit.
+- **3.5: Service roles for remaining containers** — Each container that runs a manually-configured service needs an Ansible role so it can be rebuilt from scratch. Priority order by pain-to-rebuild: Immich (Docker-based, needs DB + ML), PhotoPrism (community script, privileged container), Inference (model serving), Jupyter (notebook server). Some of these may be simple "install package + template config" roles; others (Immich) are Docker Compose deployments.
+- **3.6: k8s manifest automation** — The manifests/ directory contains portfolio app resources (namespace, deployment, cronjob, PVC, secrets). Currently applied manually with kubectl. Options: (a) Ansible role that runs kubectl apply, (b) Flux/ArgoCD for GitOps, (c) simple script. Flux is likely overkill for one app; a role or Makefile is more appropriate.
+- **3.7: Backup strategy** — Automate backups at three levels: (a) Proxmox container snapshots (vzdump on cron), (b) TrueNAS dataset snapshots (already has ZFS snapshots, may just need retention policy), (c) Application-level backups (Grafana dashboards, Immich DB, k8s etcd). A daily cron on the Proxmox host for vzdump, plus an Ansible role to configure snapshot policies.
+- **3.8: Delete legacy ansible-k3s/inventory.ini** — Confirm dynamic inventory works with k3s playbook, then remove the old static inventory.
+- **3.9: Fix lxc-prep role** — Derive k3s_container_ids from inventory group membership instead of the hardcoded list from Terraform output. The k3s_cluster group already has the right hosts; the role just needs to look up their vm_id host var.
+
+### Phase 2 — Security Hardening (deferred)
+
+Can be done at any time; does not block Phase 3. The longer it's deferred, the more plaintext credentials accumulate in new roles.
+
+- **2.1: Per-service passwords** — Replace single shared password with unique passwords per credential scope (Proxmox root, container root, Omada, AdGuard, Grafana, etc.).
+- **2.2: ansible-vault encryption** — Encrypt all vault/secrets files with ansible-vault. Store vault password in ~/.vault_pass outside the repo. Optionally un-gitignore encrypted files for version history.
+- **2.3: Move AdGuard + Grafana credentials to vault files** — Currently inline in playbooks. Move to encrypted group_vars.
+- **2.4: Proxmox API TLS** — Generate proper cert, install on Proxmox, remove insecure=true from provider config.
+- **2.5: (Rejected) Remote Terraform backend** — Decided against. The locals map contains all vm_ids so state is recoverable via terraform import. Keeping DR simple: git + known vm_ids = recovery.
+
+### Phase 4 — Maturity (future)
+
+- **CI/CD pipeline** — Lint Terraform (tflint/terraform validate), lint Ansible (ansible-lint), run on push. Could be a simple GitHub Actions workflow or a local Drone/Gitea CI on the devbox.
+- **Documentation** — Auto-generate network diagram from inventory. README with quickstart for new contributors (i.e., future George).
+- **Alerting** — Prometheus alertmanager rules for container down, disk full, high CPU. Route to email or push notification.
+- **Multi-host Proxmox** — If a second Proxmox node is added, the locals map needs a node field per container. The for_each and inventory script would need minor updates.
+
+### Design Principles
+
+1. **Single source of truth**: local.containers in main.tf for Proxmox resources; devices.yml for everything else. All downstream config is derived.
+2. **Dependency chain**: Edit locals -> terraform apply -> ansible-playbook. Inventory reads TF state directly.
+3. **DNS-first**: Inter-service communication uses hostname.homelab. No hardcoded IPs in application config.
+4. **Convention over configuration**: Naming conventions preferred over mapping tables. If two things relate, they share a name (tunnel resource = container key, role name = inventory group).
+5. **Role-based grouping**: Container roles auto-generate Ansible groups. Role name = service identity, not a category.
+
 ## Provider Versions
 
 - Terraform: >= 1.5
@@ -244,3 +287,7 @@ HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 - cloudflare/cloudflare: ~> 4.0
 - hashicorp/random: ~> 3.0
 - AdGuard Home: v0.107.73
+- Prometheus: 2.53.4
+- Grafana: 12.4.1
+- node_exporter: 1.8.2
+- cloudflared: 2026.3.0
