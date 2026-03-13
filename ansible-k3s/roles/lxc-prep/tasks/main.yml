@@ -1,4 +1,15 @@
 ---
+# Configure LXC containers for k3s on the Proxmox host.
+# Derives container IDs from the k3s_cluster inventory group — no hardcoded list.
+
+- name: Derive k3s container IDs from inventory
+  set_fact:
+    k3s_vm_ids: "{{ groups['k3s_cluster'] | map('extract', hostvars, 'vm_id') | list }}"
+
+- name: Show k3s container IDs
+  debug:
+    msg: "k3s containers to configure: {{ k3s_vm_ids }}"
+
 - name: Configure LXC containers for K3S
   block:
     - name: Add apparmor.profile unconfined to LXC configs
@@ -6,21 +17,21 @@
         path: "/etc/pve/lxc/{{ item }}.conf"
         line: "lxc.apparmor.profile: unconfined"
         state: present
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
 
     - name: Add cgroup devices allow to LXC configs
       lineinfile:
         path: "/etc/pve/lxc/{{ item }}.conf"
         line: "lxc.cgroup.devices.allow: a"
         state: present
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
 
     - name: Add cap drop to LXC configs
       lineinfile:
         path: "/etc/pve/lxc/{{ item }}.conf"
         line: "lxc.cap.drop:"
         state: present
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
 
     - name: Set kernel parameters required by k3s on PVE host
       sysctl:
@@ -36,12 +47,12 @@
 
     - name: Stop containers
       command: "pct stop {{ item }}"
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
       ignore_errors: yes
 
     - name: Wait for containers to stop
       command: "pct status {{ item }}"
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
       register: ct_status
       until: "'stopped' in ct_status.stdout"
       retries: 12
@@ -50,7 +61,7 @@
 
     - name: Start containers
       command: "pct start {{ item }}"
-      loop: "{{ k3s_container_ids }}"
+      loop: "{{ k3s_vm_ids }}"
       ignore_errors: yes
 
     - name: Wait for containers to boot
