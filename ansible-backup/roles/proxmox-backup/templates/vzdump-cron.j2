@@ -1,0 +1,5 @@
+# Homelab container backups — managed by Ansible
+# Runs daily vzdump of all containers to TrueNAS
+PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+
+{{ backup_cron_minute }} {{ backup_cron_hour }} * * * root vzdump $(pct list | tail -n+2 | awk '{print $1}' | tr '\n' ' ') --dumpdir {{ backup_storage_path }} --compress {{ backup_compress }} --mode {{ backup_mode }} --quiet 1 2>&1 | logger -t vzdump-homelab

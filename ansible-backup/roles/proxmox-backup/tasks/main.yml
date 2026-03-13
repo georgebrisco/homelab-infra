@@ -1,0 +1,58 @@
+---
+# Proxmox backup role
+# Configures vzdump cron + runs immediate backup on demand.
+
+- name: Ensure backup directory exists on TrueNAS
+  file:
+    path: "{{ backup_storage_path }}"
+    state: directory
+    mode: "0755"
+
+- name: Get list of all container IDs
+  shell: pct list | tail -n+2 | awk '{print $1}' | tr '\n' ' '
+  register: container_ids
+  changed_when: false
+
+- name: Deploy vzdump cron job
+  template:
+    src: vzdump-cron.j2
+    dest: /etc/cron.d/vzdump-homelab
+    mode: "0644"
+  tags: cron
+
+- name: Deploy backup retention script
+  template:
+    src: backup-retention.sh.j2
+    dest: /usr/local/bin/homelab-backup-retention
+    mode: "0755"
+  tags: cron
+
+- name: Deploy retention cron (runs after backup)
+  cron:
+    name: homelab backup retention
+    hour: "{{ backup_cron_hour + 1 }}"
+    minute: "{{ backup_cron_minute }}"
+    job: /usr/local/bin/homelab-backup-retention
+    user: root
+  tags: cron
+
+- name: Run immediate backup of all containers
+  shell: >
+    vzdump {{ container_ids.stdout }}
+    --dumpdir {{ backup_storage_path }}
+    --compress {{ backup_compress }}
+    --mode {{ backup_mode }}
+    --quiet 1
+  register: backup_result
+  changed_when: true
+  tags:
+    - backup-now
+    - never
+
+- name: Show backup result
+  debug:
+    var: backup_result.stdout_lines
+  when: backup_result is defined and backup_result.stdout_lines is defined
+  tags:
+    - backup-now
+    - never

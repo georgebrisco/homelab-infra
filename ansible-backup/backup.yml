@@ -1,0 +1,29 @@
+---
+# Proxmox container backup strategy
+#
+# Backs up all LXC containers to TrueNAS via vzdump.
+# Configures a daily cron on the Proxmox host.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-backup/backup.yml
+#
+# To run an immediate backup (skip cron setup):
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-backup/backup.yml --tags backup-now
+
+- name: Configure Proxmox backups
+  hosts: proxmox_host
+  gather_facts: true
+
+  vars:
+    backup_storage_path: /mnt/truenas/backups/proxmox
+    backup_keep_daily: 3
+    backup_keep_weekly: 2
+    backup_keep_monthly: 1
+    backup_compress: zstd
+    backup_mode: snapshot
+    backup_cron_hour: 2
+    backup_cron_minute: 30
+
+  roles:
+    - role: proxmox-backup

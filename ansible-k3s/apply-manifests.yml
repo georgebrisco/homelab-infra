@@ -1,0 +1,68 @@
+---
+# Apply k8s manifests to the k3s cluster
+#
+# Applies manifests in dependency order: namespaces → storage → secrets → apps.
+# Runs kubectl from the manager node (where kubeconfig is already set up).
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook ansible-k3s/apply-manifests.yml
+#
+# To skip secret creation (e.g. in CI or if secrets already exist):
+#   ansible-playbook ansible-k3s/apply-manifests.yml --skip-tags secrets
+
+- name: Apply k8s manifests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    manifests_dir: "{{ playbook_dir }}/../manifests"
+
+  tasks:
+    - name: Apply namespaces
+      command: kubectl apply -f {{ manifests_dir }}/namespaces/
+      register: ns_result
+      changed_when: "created in ns_result.stdout or configured in ns_result.stdout"
+
+    - name: Apply storage (PVCs)
+      command: kubectl apply -f {{ manifests_dir }}/storage/
+      register: storage_result
+      changed_when: "created in storage_result.stdout or configured in storage_result.stdout"
+
+    - name: Check if portfolio-email-config secret exists
+      command: kubectl get secret portfolio-email-config -n portfolio
+      register: secret_check
+      failed_when: false
+      changed_when: false
+      tags: secrets
+
+    - name: Remind to create secret if missing
+      debug:
+        msg: >
+          Secret portfolio-email-config does not exist in namespace portfolio.
+          Create it manually:
+            kubectl create secret generic portfolio-email-config
+              --from-file=email_config.json -n portfolio
+          See manifests/portfolio/secret.yaml.example for format.
+      when: secret_check.rc != 0
+      tags: secrets
+
+    - name: Apply portfolio deployment
+      command: kubectl apply -f {{ manifests_dir }}/portfolio/deployment-prices.yaml
+      register: deploy_result
+      changed_when: "created in deploy_result.stdout or configured in deploy_result.stdout"
+
+    - name: Apply portfolio cronjob
+      command: kubectl apply -f {{ manifests_dir }}/portfolio/cronjob-email.yaml
+      register: cron_result
+      changed_when: "created in cron_result.stdout or configured in cron_result.stdout"
+
+    - name: Show applied resources
+      command: kubectl get all,pvc -n portfolio
+      register: resources
+      changed_when: false
+
+    - name: Display cluster state
+      debug:
+        var: resources.stdout_lines

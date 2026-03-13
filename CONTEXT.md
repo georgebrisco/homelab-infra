@@ -79,11 +79,16 @@ homelab-infra/
 │   ├── group_vars/all/{main.yml,secrets.yml}
 │   └── roles/omada-router/{defaults,tasks}/
 ├── ansible-k3s/
+│   ├── apply-manifests.yml        # Apply k8s manifests in dependency order
 │   ├── provision.yml                # Full k3s cluster bootstrap (7 plays)
 │   ├── inventory.ini.example
 │   ├── group_vars/all/{main.yml,vault.yml}
 │   └── roles/{lxc-prep,base,k3s-server,k3s-agent,nfs-storage,kubeconfig}/
-└── manifests/                       # k8s manifests (applied manually)
+├── ansible-backup/
+│   ├── backup.yml                  # Proxmox vzdump to TrueNAS + retention
+│   └── roles/proxmox-backup/{tasks,templates}/
+├── Makefile                        # Convenience targets (make help)
+└── manifests/                       # k8s manifests (applied via make k8s)
     ├── namespaces/portfolio.yaml
     ├── portfolio/{Dockerfile,cronjob-email.yaml,deployment-prices.yaml,secret.yaml.example}
     └── storage/pvc-portfolio-db.yaml
@@ -209,9 +214,15 @@ HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 - 3.8: Deleted legacy ansible-k3s/inventory.ini
 - 3.9: lxc-prep role derives container IDs from inventory group
 
+- 3.6: k8s manifest apply playbook (`ansible-k3s/apply-manifests.yml`) — applies namespaces, storage, secrets, apps in order
+- 3.7: Proxmox backup to TrueNAS (`ansible-backup/backup.yml`) — daily vzdump cron at 02:30, retention: 3 daily / 2 weekly / 1 monthly
+- Makefile with targets for all operations (`make help` for full list)
+
 **Remaining:**
-- **3.6: k8s manifest automation** — manifests/ directory applied manually. Options: Ansible role with kubectl apply, Flux/ArgoCD, or simple script.
-- **3.7: Backup strategy** — Proxmox vzdump on cron, TrueNAS ZFS snapshot retention, app-level backups (Immich DB, Grafana dashboards, k8s etcd).
+- Deploy backup role to Proxmox host: `make backup` (currently dry-run validated, not yet applied)
+- Apply k8s manifests once portfolio Docker image is built and pushed
+- Push manager SSH key to HomeAssistant (.11) and TrueNAS (.44) manually
+- Deploy node_exporter to physical devices for full Prometheus coverage
 
 ### Phase 2 — Security Hardening (deferred)
 

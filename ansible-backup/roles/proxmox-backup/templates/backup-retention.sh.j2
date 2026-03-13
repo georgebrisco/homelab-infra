@@ -1,0 +1,59 @@
+#!/bin/bash
+# Homelab backup retention — managed by Ansible
+# Keeps: {{ backup_keep_daily }} daily, {{ backup_keep_weekly }} weekly, {{ backup_keep_monthly }} monthly
+# Runs after vzdump cron completes
+
+BACKUP_DIR="{{ backup_storage_path }}"
+KEEP_DAILY={{ backup_keep_daily }}
+KEEP_WEEKLY={{ backup_keep_weekly }}
+KEEP_MONTHLY={{ backup_keep_monthly }}
+
+# Calculate cutoff dates
+DAILY_CUTOFF=$(date -d "-${KEEP_DAILY} days" +%s)
+WEEKLY_CUTOFF=$(date -d "-$((KEEP_WEEKLY * 7)) days" +%s)
+MONTHLY_CUTOFF=$(date -d "-$((KEEP_MONTHLY * 30)) days" +%s)
+
+cd "$BACKUP_DIR" || exit 1
+
+# Process each backup file
+for f in vzdump-lxc-*.tar.zst vzdump-lxc-*.tar.gz vzdump-lxc-*.vma.zst; do
+    [ -f "$f" ] || continue
+
+    FILE_DATE=$(stat -c %Y "$f")
+
+    # Keep if within daily retention
+    if [ "$FILE_DATE" -ge "$DAILY_CUTOFF" ]; then
+        continue
+    fi
+
+    # Keep one per week within weekly retention
+    if [ "$FILE_DATE" -ge "$WEEKLY_CUTOFF" ]; then
+        FILE_WEEK=$(date -d @"$FILE_DATE" +%Y-%W)
+        MARKER="/tmp/backup-keep-week-${FILE_WEEK}"
+        if [ ! -f "$MARKER" ]; then
+            touch "$MARKER"
+            continue
+        fi
+    fi
+
+    # Keep one per month within monthly retention
+    if [ "$FILE_DATE" -ge "$MONTHLY_CUTOFF" ]; then
+        FILE_MONTH=$(date -d @"$FILE_DATE" +%Y-%m)
+        MARKER="/tmp/backup-keep-month-${FILE_MONTH}"
+        if [ ! -f "$MARKER" ]; then
+            touch "$MARKER"
+            continue
+        fi
+    fi
+
+    # Delete if beyond all retention
+    echo "Removing old backup: $f"
+    rm -f "$f"
+    # Also remove corresponding log/notes files
+    rm -f "${f%.tar.*}.log" "${f%.tar.*}.notes"
+done
+
+# Clean up markers
+rm -f /tmp/backup-keep-week-* /tmp/backup-keep-month-*
+
+echo "Backup retention complete: $(ls vzdump-lxc-*.tar.* 2>/dev/null | wc -l) backups remaining"
