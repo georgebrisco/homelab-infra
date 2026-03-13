@@ -3,10 +3,9 @@
 # Configures vzdump cron + runs immediate backup on demand.
 
 - name: Ensure backup directory exists on TrueNAS
-  file:
-    path: "{{ backup_storage_path }}"
-    state: directory
-    mode: "0755"
+  shell: mkdir -p {{ backup_storage_path }}
+  args:
+    creates: "{{ backup_storage_path }}"
 
 - name: Get list of all container IDs
   shell: pct list | tail -n+2 | awk '{print $1}' | tr '\n' ' '

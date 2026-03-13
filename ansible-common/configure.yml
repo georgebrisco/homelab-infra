@@ -1,5 +1,5 @@
 ---
-# Deploy common baseline services to all containers
+# Deploy common baseline services to all managed hosts
 #
 # Currently: node_exporter (Prometheus metrics on :9100)
 #
@@ -9,6 +9,13 @@
 
 - name: Deploy baseline services to all containers
   hosts: containers
+  gather_facts: true
+
+  roles:
+    - role: node-exporter
+
+- name: Deploy baseline services to physical devices
+  hosts: proxmox_host
   gather_facts: true
 
   roles:
