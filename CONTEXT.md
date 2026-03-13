@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-13 (after Phase 3.1 cloudflared role).
+> Last updated: 2026-03-13 (after Phase 3.3 monitoring stack).
 
 ## Overview
 
@@ -28,6 +28,8 @@ Single Git repository managing a homelab running on one Proxmox VE host (`steam`
 ## Git History
 
 ```
+f83849f Phase 3.3: Prometheus + Grafana monitoring stack role
+318a2b4 Rename tunnel resources to match container keys
 d449bc5 Phase 3.1: cloudflared deployment role
 a2fc04b Phase 3.0: Fix SSH access - deploy manager key to all containers
 e8c410a Add LLM context file for project continuity
@@ -54,6 +56,12 @@ homelab-infra/
 ├── ansible-tunnel/
 |   |- configure.yml                # Playbook: deploy cloudflared to tunnel_hosts
 |   +- roles/cloudflared/tasks/main.yml
+|- ansible-common/
+|   |- configure.yml                # Playbook: deploy node_exporter to all containers
+|   +- roles/node-exporter/{tasks,handlers}/main.yml
+|- ansible-monitoring/
+|   |- configure.yml                # Playbook: deploy Prometheus + Grafana
+|   +- roles/{prometheus,grafana}/{tasks,handlers,templates}/
 |- ansible-dns/
 │   ├── configure.yml                # Playbook: push hostname.homelab DNS rewrites to AdGuard
 │   └── roles/adguard-dns/tasks/main.yml
@@ -98,7 +106,7 @@ All defined in `local.containers` in `main.tf`. Key fields: vm_id, hostname, res
 | manager | 107 | manager | .28 | management | Runs TF/Ansible |
 | devbox | 104 | devbox | .23 | development | NAS + media mounts |
 | monitoring | 103 | monitoring | .25 | monitoring | Grafana/Prometheus |
-| uptime_kuma | 108 | uptime-kuma | .26 | monitoring | |
+| uptime_kuma | 108 | uptime-kuma | .26 | uptime_kuma | |
 | omada | 109 | omada | .27 | network | Omada Controller |
 | photoprism | 100 | photoprism | .29 | media | Privileged, Debian, 48GB RAM |
 | jupyter | 105 | jupyter | .30 | development | |
@@ -173,6 +181,12 @@ ansible-playbook -i ansible-router/inventory.ini ansible-router/configure.yml
 # DNS: Push hostname.homelab rewrites to AdGuard Home
 ansible-playbook -i scripts/terraform_inventory.py ansible-dns/configure.yml
 
+# Common baseline: node_exporter on all containers
+ansible-playbook -i scripts/terraform_inventory.py ansible-common/configure.yml
+
+# Monitoring: Prometheus + Grafana on monitoring_hosts
+ansible-playbook -i scripts/terraform_inventory.py ansible-monitoring/configure.yml
+
 # Tunnels: Deploy/update cloudflared on tunnel containers
 ansible-playbook -i scripts/terraform_inventory.py ansible-tunnel/configure.yml
 
@@ -217,7 +231,7 @@ HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 
 ### Reproducibility (Phase 3)
 7. **cloudflared deployment roles**: ~~DONE~~ ansible-tunnel role deploys and configures cloudflared from Terraform tokens.
-8. **No service deployment roles**: Monitoring, Immich, PhotoPrism, Jupyter, Inference — all manually configured.
+8. **Service deployment roles**: Monitoring stack ~~DONE~~ (Prometheus + Grafana). Remaining: Immich, PhotoPrism, Jupyter, Inference, Uptime Kuma — all manually configured.
 9. **k8s manifests not in CI/CD**: manifests/ directory exists but isn't applied automatically.
 10. **No backup strategy**: No automated backups of Proxmox, TrueNAS, or application data.
 11. **lxc-prep role uses hardcoded k3s_container_ids**: Should derive from inventory group membership (k3s_cluster group) instead. Fix when k3s playbook is next run with dynamic inventory.
