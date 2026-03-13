@@ -1,6 +1,17 @@
 ---
 # Set DNS servers advertised to DHCP clients on the Default LAN.
-# Re-uses the omada_networks data already fetched in auth.yml — no extra GET needed.
+#
+# The Omada controller has TWO DNS settings:
+#   1. LAN network-level: primaryDns / secondaryDns (router's own resolver)
+#   2. DHCP server-level: dhcpSettings.priDns / dhcpSettings.sndDns (what clients get)
+#
+# This task updates BOTH to keep them consistent.
+#
+# IMPORTANT: The Omada 5.15.x API requires lanNetworkIpv6Config.proto in
+# every PATCH to /setting/lan/networks/{id}, even when IPv6 is disabled.
+# The GET response omits this field, so we must inject it (default: "none").
+# Without it the API returns errorCode -1001 "Parameter [proto] should not
+# be null" — but still HTTP 200, so always check errorCode in the body.
 
 - name: Find Default LAN network object
   set_fact:
@@ -8,18 +19,30 @@
                      | selectattr('name', 'equalto', omada_lan_name)
                      | first }}"
 
-- name: Set current DNS fact
+- name: Extract current DHCP DNS settings
   set_fact:
-    current_primary_dns: "{{ lan_network.primaryDns | default('') }}"
+    current_dhcp_pri_dns: "{{ lan_network.dhcpSettings.priDns | default('') }}"
+    current_dhcp_snd_dns: "{{ lan_network.dhcpSettings.sndDns | default('') }}"
+
+- name: Check if DHCP DNS needs updating
+  set_fact:
+    dhcp_dns_needs_update: "{{ current_dhcp_pri_dns != lan_primary_dns or current_dhcp_snd_dns != lan_secondary_dns }}"
 
 - name: DNS servers already correct — skip update
   debug:
-    msg: "DNS already set to {{ current_primary_dns }} — no change needed."
-  when: current_primary_dns == lan_primary_dns
+    msg: "DHCP DNS already set to {{ current_dhcp_pri_dns }} / {{ current_dhcp_snd_dns }} — no change needed."
+  when: not dhcp_dns_needs_update
 
-# PATCH the LAN network with updated DNS fields merged into the full existing object.
-# Omada requires the complete network body — we merge our changes into the existing config.
-- name: Update LAN DNS servers to point at AdGuard Home
+# Build a safe IPv6 config that always includes proto (required by API).
+- name: Build lanNetworkIpv6Config with proto field
+  set_fact:
+    safe_ipv6_config: >-
+      {{ lan_network.lanNetworkIpv6Config | default({'enable': 0})
+         | combine({'proto': lan_network.lanNetworkIpv6Config.proto | default('none')}) }}
+  when: dhcp_dns_needs_update
+
+# PATCH the LAN network with updated DNS + the mandatory IPv6 proto field.
+- name: Update DNS servers (LAN + DHCP) to point at AdGuard Home
   uri:
     url: "{{ omada_url }}/{{ omadacId }}/api/v2/sites/{{ omada_siteId }}/setting/lan/networks/{{ omada_netId }}?token={{ omada_token }}"
     method: PATCH
@@ -28,13 +51,34 @@
       Cookie: "{{ omada_session_cookie }}"
       Csrf-Token: "{{ omada_token }}"
     body_format: json
-    body: "{{ lan_network | combine({'primaryDns': lan_primary_dns, 'secondaryDns': lan_secondary_dns}) }}"
+    body: >-
+      {{ lan_network | combine({
+           'primaryDns': lan_primary_dns,
+           'secondaryDns': lan_secondary_dns,
+           'lanNetworkIpv6Config': safe_ipv6_config,
+           'dhcpSettings': lan_network.dhcpSettings | combine({
+             'priDns': lan_primary_dns,
+             'sndDns': lan_secondary_dns,
+             'dhcpns': 'manual'
+           })
+         })
+      }}
     status_code: 200
     return_content: true
-  when: current_primary_dns != lan_primary_dns
+  when: dhcp_dns_needs_update
   register: dns_update
+
+# Omada returns HTTP 200 even on errors — must check errorCode in body.
+- name: Verify API accepted the update
+  assert:
+    that:
+      - dns_update.json.errorCode == 0
+    fail_msg: >-
+      Omada API returned errorCode {{ dns_update.json.errorCode }}:
+      {{ dns_update.json.msg | default('unknown error') }}
+  when: dns_update is changed
 
 - name: Confirm DNS update applied
   debug:
-    msg: "DNS updated — primary: {{ lan_primary_dns }}, secondary: {{ lan_secondary_dns }}"
+    msg: "DNS updated — DHCP clients will now receive: primary={{ lan_primary_dns }}, secondary={{ lan_secondary_dns }}"
   when: dns_update is changed
