@@ -92,6 +92,10 @@ k3s:
 k8s:
 	ansible-playbook ansible-k3s/apply-manifests.yml
 
+
+gardener:
+	ansible-playbook -i scripts/terraform_inventory.py ansible-gardener/configure.yml
+
 all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns
 
 # --- Ops ---

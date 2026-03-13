@@ -1,0 +1,8 @@
+---
+# rtl_433 defaults
+rtl433_frequency: "915M"
+rtl433_sample_rate: 250000
+rtl433_gain: 38.6
+rtl433_protocol: 142
+rtl433_log_dir: /var/log/rtl_433
+rtl433_host_prefix: gardener

@@ -1,0 +1,7 @@
+---
+# moisture-proxy defaults
+moisture_proxy_dir: /opt/moisture_proxy
+moisture_proxy_user: moistureproxy
+moisture_proxy_host_prefix: gardener
+moisture_proxy_rtl_topic: "rtl_433/{{ moisture_proxy_host_prefix }}/events"
+moisture_proxy_publish_topic: "rtl_proxy/{{ moisture_proxy_host_prefix }}/events"

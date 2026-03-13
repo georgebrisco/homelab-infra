@@ -1,0 +1,7 @@
+---
+# MQTT broker configuration — shared by all IoT roles
+# Change these once here and all services get reconfigured on next playbook run
+mqtt_broker: "192.168.50.11"
+mqtt_port: 1883
+mqtt_user: "mqtt"
+mqtt_pass: "2vydqttE"

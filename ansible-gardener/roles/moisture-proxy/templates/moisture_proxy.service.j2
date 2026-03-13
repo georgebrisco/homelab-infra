@@ -1,0 +1,25 @@
+[Unit]
+Description=Moisture Proxy (MQTT bridge)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ moisture_proxy_user }}
+Group={{ moisture_proxy_user }}
+WorkingDirectory={{ moisture_proxy_dir }}
+ExecStart=/usr/bin/python3 {{ moisture_proxy_dir }}/moisture_proxy.py
+Restart=on-failure
+RestartSec=3
+SyslogIdentifier=moisture_proxy
+
+# MQTT config passed as environment variables
+Environment=MQTT_BROKER={{ mqtt_broker }}
+Environment=MQTT_PORT={{ mqtt_port }}
+Environment=MQTT_USER={{ mqtt_user }}
+Environment=MQTT_PASS={{ mqtt_pass }}
+Environment=RTL_TOPIC_PREFIX={{ moisture_proxy_rtl_topic }}
+Environment=HOSTPREFIX={{ moisture_proxy_host_prefix }}
+
+[Install]
+WantedBy=multi-user.target

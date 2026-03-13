@@ -1,0 +1,162 @@
+"""
+Moisture Proxy — MQTT bridge for Ecowitt WH51 soil moisture sensors.
+
+Subscribes to rtl_433 MQTT events, registers devices with Home Assistant
+via MQTT auto-discovery, and republishes sensor data.
+
+Configuration via environment variables (set in systemd unit):
+  MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASS,
+  RTL_TOPIC_PREFIX, HOSTPREFIX
+"""
+# managed by Ansible — do not edit on the host directly
+
+import os
+import json
+import time
+import logging
+from datetime import datetime, timezone
+import paho.mqtt.client as mqtt
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+BROKER = os.getenv("MQTT_BROKER", "{{ mqtt_broker }}")
+PORT = int(os.getenv("MQTT_PORT", "{{ mqtt_port }}"))
+USER = os.getenv("MQTT_USER", "{{ mqtt_user }}")
+PASS = os.getenv("MQTT_PASS", "{{ mqtt_pass }}")
+RTL_PREFIX = os.getenv("RTL_TOPIC_PREFIX", "{{ moisture_proxy_rtl_topic }}")
+HOSTPREFIX = os.getenv("HOSTPREFIX", "{{ moisture_proxy_host_prefix }}")
+
+client_id = f"moisture_proxy-{int(time.time())}"
+client = mqtt.Client(client_id=client_id, clean_session=True)
+
+if USER:
+    client.username_pw_set(USER, PASS)
+
+device_details = {}
+
+
+def register_device(device_id):
+    """Register a WH51 sensor with Home Assistant via MQTT auto-discovery."""
+    ha_id = device_id
+
+    payload = {
+        "device": {
+            "identifiers": [ha_id],
+            "name": f"Soil Moisture {device_id}",
+            "manufacturer": "Ecowitt",
+            "model": "WH51",
+            "sw_version": "0.1",
+        },
+        "origin": {
+            "name": "Hand Rolled MQTT Bridge",
+            "sw_version": "0.1",
+            "url": "https://brisco.org.uk",
+        },
+        "components": {
+            f"{ha_id}_moisture": {
+                "platform": "sensor",
+                "unique_id": f"{ha_id}_moisture",
+                "unit_of_measurement": "%",
+                "state_class": "measurement",
+                "name": f"{ha_id}_moisture",
+                "value_template": "{% raw %}{{ value_json.moisture }}{% endraw %}",
+                "expire_after": 10800,
+            },
+            f"{ha_id}_bat_voltage": {
+                "platform": "sensor",
+                "unique_id": f"{ha_id}_bat_voltage",
+                "state_class": "measurement",
+                "unit_of_measurement": "V",
+                "device_class": "voltage",
+                "name": f"{ha_id}_voltage",
+                "value_template": "{% raw %}{{ (value_json.battery_mV | float) / 1000 }}{% endraw %}",
+                "suggested_display_precision": 3,
+                "expire_after": 10800,
+            },
+            f"{ha_id}_seq_num": {
+                "platform": "sensor",
+                "unique_id": f"{ha_id}_seq_num",
+                "state_class": "measurement",
+                "unit_of_measurement": "",
+                "name": f"{ha_id}_seq_num",
+                "value_template": "{% raw %}{{ value_json.seq_num }}{% endraw %}",
+            },
+            f"{ha_id}_bat_ok": {
+                "platform": "sensor",
+                "unique_id": f"{ha_id}_bat_ok",
+                "state_class": "measurement",
+                "unit_of_measurement": "",
+                "name": f"{ha_id}_battery_ok",
+                "suggested_display_precision": 3,
+                "value_template": "{% raw %}{{ value_json.battery_ok }}{% endraw %}",
+                "expire_after": 10800,
+            },
+        },
+        "state_topic": f"rtl_proxy/{HOSTPREFIX}/events/{ha_id}",
+    }
+
+    logging.info("Registering device %s", device_id)
+    discovery_topic = f"homeassistant/device/{ha_id}/config"
+    client.publish(discovery_topic, json.dumps(payload), retain=True)
+
+    device_details[device_id] = {"seq_num": 0, "last_time": time.time()}
+    logging.info("Known devices: %s", list(device_details.keys()))
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logging.info("Connected to MQTT broker")
+        sub = f"{RTL_PREFIX}/#"
+        client.subscribe(sub)
+        logging.info("Subscribed to %s", sub)
+    else:
+        logging.error("MQTT connection failed with rc=%s", rc)
+
+
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode(errors="ignore").strip()
+    logging.info("Inbound Topic <%s> Payload <%s>", msg.topic, payload)
+
+    try:
+        j = json.loads(payload)
+    except Exception:
+        return
+
+    try:
+        epoch = int(float(j.get("time", 0)))
+    except Exception:
+        epoch = int(datetime.now(tz=timezone.utc).timestamp())
+
+    j["time_unix"] = epoch
+
+    model = j.get("model")
+    dev_id = str(j.get("id", ""))
+
+    if model != "Fineoffset-WH51":
+        logging.warning("Unknown device model: <%s>", model)
+        return
+
+    device_identifier = f"WH51-{dev_id}"
+
+    if device_identifier not in device_details:
+        logging.info("Registering new device <%s>", device_identifier)
+        register_device(device_identifier)
+    else:
+        device_details[device_identifier]["last_time"] = epoch
+        device_details[device_identifier]["seq_num"] += 1
+
+    j["seq_num"] = device_details[device_identifier]["seq_num"]
+
+    event_topic = f"rtl_proxy/{HOSTPREFIX}/events/{device_identifier}"
+    logging.info("Publishing to <%s>", event_topic)
+    client.publish(event_topic, json.dumps(j), retain=True)
+
+
+if __name__ == "__main__":
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.reconnect_delay_set(min_delay=1, max_delay=60)
+
+    logging.info("Connecting to MQTT broker %s:%s", BROKER, PORT)
+    client.connect(BROKER, PORT, keepalive=60)
+    client.loop_forever()

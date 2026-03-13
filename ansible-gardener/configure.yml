@@ -1,0 +1,27 @@
+---
+# Deploy SDR radio receiver + moisture proxy on gardener (Raspberry Pi)
+#
+# Services:
+#   - rtl_433: USB SDR → MQTT (publishes decoded RF signals)
+#   - moisture_proxy: MQTT bridge for Ecowitt WH51 → Home Assistant auto-discovery
+#   - logrotate: prevents rtl_433 logs filling the SD card
+#
+# Prerequisites:
+#   - Raspberry Pi OS Bookworm (aarch64)
+#   - RTL-SDR USB dongle plugged in
+#   - WiFi configured and SSH key deployed
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-gardener/configure.yml
+
+- name: Deploy gardener services
+  hosts: gardener_hosts
+  gather_facts: true
+
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all/mqtt.yml"
+
+  roles:
+    - role: rtl433
+    - role: moisture-proxy

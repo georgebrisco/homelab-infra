@@ -1,0 +1,68 @@
+---
+# rtl_433 — SDR radio receiver publishing to MQTT
+# Installs rtl_433 binary, deploys config, sets up systemd + logrotate.
+
+- name: Check if rtl_433 is installed
+  stat:
+    path: /usr/local/bin/rtl_433
+  register: rtl433_binary
+
+- name: Install rtl_433 build dependencies
+  apt:
+    name:
+      - librtlsdr-dev
+      - libusb-1.0-0-dev
+      - rtl-sdr
+    state: present
+    update_cache: true
+  when: not rtl433_binary.stat.exists
+
+- name: Warn if rtl_433 binary not found
+  debug:
+    msg: >
+      rtl_433 binary not found at /usr/local/bin/rtl_433.
+      Install manually: see https://github.com/merbanan/rtl_433
+      This role manages config and services only.
+  when: not rtl433_binary.stat.exists
+
+- name: Ensure config directory exists
+  file:
+    path: /etc/rtl_433
+    state: directory
+    mode: "0755"
+
+- name: Ensure log directory exists
+  file:
+    path: "{{ rtl433_log_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy rtl_433 config
+  template:
+    src: rtl_433.conf.j2
+    dest: /etc/rtl_433/rtl_433.conf
+    mode: "0644"
+  notify: restart rtl433
+
+- name: Deploy rtl_433 systemd service
+  template:
+    src: rtl433.service.j2
+    dest: /etc/systemd/system/rtl433.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart rtl433
+
+- name: Deploy logrotate config
+  template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/rtl_433
+    mode: "0644"
+
+- name: Enable and start rtl_433
+  systemd:
+    name: rtl433
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: rtl433_binary.stat.exists

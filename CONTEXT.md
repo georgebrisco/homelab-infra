@@ -120,7 +120,7 @@ All defined in `local.containers` in `main.tf`. Roles now use per-service identi
 
 ## Physical Devices (from devices.yml)
 
-**Managed**: steam (.12, Proxmox host), homeassistant (.11, HA), truenas (.44, NFS storage)
+**Managed**: steam (.12, Proxmox host), homeassistant (.11, HA), truenas (.44, NFS storage), gardener (.53, SDR radio)
 **Non-managed**: xt8-wap (.3, WiFi AP), linksys-iot (.32, IoT router)
 
 ## Dynamic Inventory Groups

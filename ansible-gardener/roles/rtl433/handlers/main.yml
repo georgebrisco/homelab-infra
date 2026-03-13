@@ -1,0 +1,9 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: restart rtl433
+  systemd:
+    name: rtl433
+    state: restarted

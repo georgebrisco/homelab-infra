@@ -1,0 +1,9 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: restart moisture_proxy
+  systemd:
+    name: moisture_proxy
+    state: restarted

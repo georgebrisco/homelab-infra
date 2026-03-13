@@ -1,0 +1,9 @@
+{{ rtl433_log_dir }}/rtl_433.log {{ rtl433_log_dir }}/rtl_433.json {
+    daily
+    rotate 3
+    compress
+    missingok
+    notifempty
+    maxsize 500M
+    copytruncate
+}

@@ -24,6 +24,12 @@ managed_devices:
     ansible_user: root
     roles: [storage]
 
+  - name: gardener
+    mac: "2c:cf:67:81:f4:03"
+    ip: "192.168.50.53"
+    ansible_user: root
+    roles: [iot, gardener]
+
 non_managed_reservations:
   - { name: xt8-wap,    mac: "7c:10:c9:e4:a9:90", ip: "192.168.50.3" }
   - { name: linksys-iot, mac: "60:38:e0:d0:65:78", ip: "192.168.50.32" }
