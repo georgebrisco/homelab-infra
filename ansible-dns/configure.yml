@@ -16,7 +16,8 @@
   vars:
     adguard_url: "http://192.168.50.2:3000"
     dns_domain: "homelab"
-    # adguard_user / adguard_password should come from vault.yml
+    adguard_user: admin
+    adguard_password: homelab
 
   pre_tasks:
     - name: Load devices.yml for non-managed entries
