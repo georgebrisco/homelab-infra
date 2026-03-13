@@ -4,6 +4,7 @@
 ###############################################################################
 
 terraform {
+  required_version = ">= 1.5"
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
@@ -18,6 +19,384 @@ terraform {
       version = "~> 3.0"
     }
   }
+}
+# =============================================================================
+# Container inventory — THE single source of truth
+# =============================================================================
+# Every container is defined here. Terraform for_each iterates this map.
+# Ansible dynamic inventory reads it via terraform output.
+# Router DHCP reservations are derived from it.
+# AdGuard local DNS entries are generated from it.
+#
+# To add a container: add an entry here, terraform apply, run playbooks.
+# To change an IP:    edit reserved_ip here, terraform apply, run playbooks.
+# =============================================================================
+
+locals {
+  # DNS defaults — referenced once, never duplicated
+  dns_servers_default = ["192.168.50.2", "9.9.9.9"]
+  dns_servers_adguard = ["1.1.1.1", "8.8.8.8"]
+
+  # OS templates
+  ubuntu_template = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+  debian_template = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+
+  containers = {
+    adguard = {
+      vm_id       = 116
+      hostname    = "adguard"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 256
+      swap        = 0
+      disk_gb     = 4
+      reserved_ip = "192.168.50.2"
+      mac         = "bc:24:11:c0:12:80"
+      static      = true
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_adguard
+      roles       = ["dns"]
+    }
+    manager = {
+      vm_id       = 107
+      hostname    = "manager"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 512
+      swap        = 512
+      disk_gb     = 8
+      reserved_ip = "192.168.50.28"
+      mac         = "bc:24:11:3b:8e:78"
+      static      = false
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = true
+      console     = true
+      dns         = local.dns_servers_default
+      roles       = ["management"]
+    }
+    devbox = {
+      vm_id       = 104
+      hostname    = "devbox"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 2048
+      swap        = 0
+      disk_gb     = 32
+      reserved_ip = "192.168.50.23"
+      mac         = "bc:24:11:d9:29:3d"
+      static      = false
+      privileged  = false
+      tags        = ["devbox", "infra"]
+      mounts = [
+        { volume = "/mnt/truenas",       path = "/mnt/nas" },
+        { volume = "/mnt/truenas-media", path = "/mnt/media" },
+      ]
+      firewall = false
+      console  = false
+      dns      = local.dns_servers_default
+      roles    = ["development"]
+    }
+    monitoring = {
+      vm_id       = 103
+      hostname    = "monitoring"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 2048
+      swap        = 512
+      disk_gb     = 16
+      reserved_ip = "192.168.50.25"
+      mac         = "bc:24:11:25:bf:da"
+      static      = false
+      privileged  = false
+      tags        = ["grafana", "monitoring", "prometheus"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["monitoring"]
+    }
+    uptime_kuma = {
+      vm_id       = 108
+      hostname    = "uptime-kuma"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 512
+      swap        = 256
+      disk_gb     = 8
+      reserved_ip = "192.168.50.26"
+      mac         = "bc:24:11:10:23:0c"
+      static      = false
+      privileged  = false
+      tags        = ["monitoring", "uptime-kuma"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["monitoring"]
+    }
+    omada = {
+      vm_id       = 109
+      hostname    = "omada"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 4096
+      swap        = 1024
+      disk_gb     = 16
+      reserved_ip = "192.168.50.27"
+      mac         = "bc:24:11:f6:9b:27"
+      static      = false
+      privileged  = false
+      tags        = ["monitoring", "network", "omada"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["network"]
+    }
+    photoprism = {
+      vm_id       = 100
+      hostname    = "photoprism"
+      template    = local.debian_template
+      os_type     = "debian"
+      cores       = 15
+      memory      = 48000
+      swap        = 512
+      disk_gb     = 32
+      reserved_ip = "192.168.50.29"
+      mac         = "bc:24:11:41:b4:81"
+      static      = false
+      privileged  = true
+      tags        = ["community-script", "media", "photo"]
+      mounts      = []
+      firewall    = false
+      console     = true
+      dns         = local.dns_servers_default
+      roles       = ["media"]
+    }
+    jupyter = {
+      vm_id       = 105
+      hostname    = "jupyter"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 4096
+      swap        = 4096
+      disk_gb     = 72
+      reserved_ip = "192.168.50.30"
+      mac         = "bc:24:11:aa:3d:c4"
+      static      = false
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = true
+      dns         = local.dns_servers_default
+      roles       = ["development"]
+    }
+    inference = {
+      vm_id       = 106
+      hostname    = "inference"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 8192
+      swap        = 4096
+      disk_gb     = 136
+      reserved_ip = "192.168.50.31"
+      mac         = "bc:24:11:7e:0a:16"
+      static      = false
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = true
+      console     = true
+      dns         = local.dns_servers_default
+      roles       = ["ml"]
+    }
+    immich = {
+      vm_id       = 111
+      hostname    = "immich"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 4
+      memory      = 8192
+      swap        = 1024
+      disk_gb     = 32
+      reserved_ip = "192.168.50.20"
+      mac         = "bc:24:11:f8:2a:48"
+      static      = false
+      privileged  = true
+      tags        = ["docker", "immich", "photos"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["media"]
+    }
+    ocsirb_web = {
+      vm_id       = 110
+      hostname    = "ocsirb-web"
+      template    = local.debian_template
+      os_type     = "debian"
+      cores       = 1
+      memory      = 256
+      swap        = 256
+      disk_gb     = 2
+      reserved_ip = "192.168.50.10"
+      mac         = "bc:24:11:35:82:27"
+      static      = false
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = true
+      dns         = local.dns_servers_default
+      roles       = ["web"]
+    }
+    ocsirb_staging = {
+      vm_id       = 112
+      hostname    = "ocsirb-staging"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 1024
+      swap        = 0
+      disk_gb     = 8
+      reserved_ip = "192.168.50.13"
+      mac         = "bc:24:11:4d:6b:56"
+      static      = false
+      privileged  = false
+      tags        = ["ocsirb", "staging", "website"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["web", "tunnel"]
+    }
+    preview_site = {
+      vm_id       = 922
+      hostname    = "preview-site"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 1024
+      swap        = 0
+      disk_gb     = 8
+      reserved_ip = "192.168.50.22"
+      mac         = "bc:24:11:12:08:02"
+      static      = false
+      privileged  = false
+      tags        = ["preview-site", "website"]
+      mounts = [
+        { volume = "/mnt/truenas", path = "/mnt/nas" },
+      ]
+      firewall = false
+      console  = false
+      dns      = local.dns_servers_default
+      roles    = ["web", "tunnel"]
+    }
+    production_site = {
+      vm_id       = 997
+      hostname    = "production-site"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 1024
+      swap        = 0
+      disk_gb     = 8
+      reserved_ip = "192.168.50.24"
+      mac         = "bc:24:11:7b:e6:88"
+      static      = false
+      privileged  = false
+      tags        = ["production-site", "website"]
+      mounts = [
+        { volume = "/mnt/truenas", path = "/mnt/nas" },
+      ]
+      firewall = false
+      console  = false
+      dns      = local.dns_servers_default
+      roles    = ["web", "tunnel"]
+    }
+    k3s_server = {
+      vm_id       = 113
+      hostname    = "k3s-server"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 2048
+      swap        = 0
+      disk_gb     = 12
+      reserved_ip = "192.168.50.14"
+      mac         = "bc:24:11:e0:a0:17"
+      static      = false
+      privileged  = true
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["k3s", "k3s_server"]
+    }
+    k3s_agent_1 = {
+      vm_id       = 114
+      hostname    = "k3s-agent-1"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 2048
+      swap        = 0
+      disk_gb     = 12
+      reserved_ip = "192.168.50.15"
+      mac         = "bc:24:11:be:d2:fd"
+      static      = false
+      privileged  = true
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["k3s", "k3s_agent"]
+    }
+    k3s_agent_2 = {
+      vm_id       = 115
+      hostname    = "k3s-agent-2"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 2048
+      swap        = 0
+      disk_gb     = 12
+      reserved_ip = "192.168.50.16"
+      mac         = "bc:24:11:0c:fe:63"
+      static      = false
+      privileged  = true
+      tags        = []
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["k3s", "k3s_agent"]
+    }
+  }
+
+  # Derived lookups
+  dhcp_containers   = { for k, v in local.containers : k => v if !v.static }
+  k3s_nodes         = { for k, v in local.containers : k => v if contains(v.roles, "k3s") }
+  k3s_server_entry  = [for k, v in local.containers : v if contains(v.roles, "k3s_server")][0]
+  k3s_agent_entries = { for k, v in local.containers : k => v if contains(v.roles, "k3s_agent") }
+  tunnel_containers = { for k, v in local.containers : k => v if contains(v.roles, "tunnel") }
 }
 
 provider "proxmox" {
@@ -47,180 +426,73 @@ locals {
 }
 
 # =============================================================================
-# CT 116 — adguard  (STATIC .2 — critical DNS infrastructure)
+# Proxmox LXC Containers — single for_each over local.containers
 # =============================================================================
-resource "proxmox_virtual_environment_container" "adguard" {
+
+resource "proxmox_virtual_environment_container" "ct" {
+  for_each = local.containers
+
   node_name    = local.node
-  vm_id        = 116
-  unprivileged = true
+  vm_id        = each.value.vm_id
+  unprivileged = !each.value.privileged
   started      = true
+  tags         = length(each.value.tags) > 0 ? each.value.tags : null
 
   operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
+    template_file_id = each.value.template
+    type             = each.value.os_type
   }
 
   cpu {
-    cores = 1
+    cores = each.value.cores
   }
 
   memory {
-    dedicated = 256
-    swap      = 0
+    dedicated = each.value.memory
+    swap      = each.value.swap
   }
 
   disk {
     datastore_id = local.storage
-    size         = 4
+    size         = each.value.disk_gb
   }
 
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "adguard"
-
-    dns {
-      servers = ["1.1.1.1", "8.8.8.8"]
+  dynamic "mount_point" {
+    for_each = each.value.mounts
+    content {
+      volume = mount_point.value.volume
+      path   = mount_point.value.path
+      backup = false
     }
-
-    ip_config {
-      ipv4 {
-        address = "192.168.50.2/24"
-        gateway = local.gw
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 107 — manager
-# =============================================================================
-resource "proxmox_virtual_environment_container" "manager" {
-  node_name    = local.node
-  vm_id        = 107
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 512
-    swap      = 512
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 8
   }
 
   network_interface {
     name     = "eth0"
     bridge   = "vmbr0"
-    firewall = true
+    firewall = each.value.firewall ? true : null
   }
 
   initialization {
-    hostname = "manager"
+    hostname = each.value.hostname
 
     dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
+      servers = each.value.dns
     }
 
     ip_config {
       ipv4 {
-        address = "dhcp"
+        address = each.value.static ? "${each.value.reserved_ip}/24" : "dhcp"
+        gateway = each.value.static ? local.gw : null
       }
     }
   }
 
-  console {
-    enabled   = true
-    tty_count = 2
-    type      = "tty"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 104 — devbox
-# =============================================================================
-resource "proxmox_virtual_environment_container" "devbox" {
-  node_name    = local.node
-  vm_id        = 104
-  tags         = ["devbox", "infra"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 32
-  }
-
-  mount_point {
-    volume = "/mnt/truenas"
-    path   = "/mnt/nas"
-    backup = false
-  }
-
-  mount_point {
-    volume = "/mnt/truenas-media"
-    path   = "/mnt/media"
-    backup = false
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "devbox"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
+  dynamic "console" {
+    for_each = each.value.console ? [1] : []
+    content {
+      enabled   = true
+      tty_count = 2
+      type      = "tty"
     }
   }
 
@@ -231,822 +503,6 @@ resource "proxmox_virtual_environment_container" "devbox" {
     ]
   }
 }
-
-# =============================================================================
-# CT 103 — monitoring
-# =============================================================================
-resource "proxmox_virtual_environment_container" "monitoring" {
-  node_name    = local.node
-  vm_id        = 103
-  tags         = ["grafana", "monitoring", "prometheus"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
-    swap      = 512
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 16
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "monitoring"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 108 — uptime-kuma
-# =============================================================================
-resource "proxmox_virtual_environment_container" "uptime_kuma" {
-  node_name    = local.node
-  vm_id        = 108
-  tags         = ["monitoring", "uptime-kuma"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 1
-  }
-
-  memory {
-    dedicated = 512
-    swap      = 256
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 8
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "uptime-kuma"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 109 — omada  (switch LAST — controls the network!)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "omada" {
-  node_name    = local.node
-  vm_id        = 109
-  tags         = ["monitoring", "network", "omada"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 4096
-    swap      = 1024
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 16
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "omada"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 100 — photoprism  (PRIVILEGED, high resources)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "photoprism" {
-  node_name    = local.node
-  vm_id        = 100
-  tags         = ["community-script", "media", "photo"]
-  unprivileged = false
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
-    type             = "debian"
-  }
-
-  cpu {
-    cores = 15
-  }
-
-  memory {
-    dedicated = 48000
-    swap      = 512
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 32
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "photoprism"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  console {
-    enabled   = true
-    tty_count = 2
-    type      = "tty"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 105 — jupyter
-# =============================================================================
-resource "proxmox_virtual_environment_container" "jupyter" {
-  node_name    = local.node
-  vm_id        = 105
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 4096
-    swap      = 4096
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 72
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "jupyter"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  console {
-    enabled   = true
-    tty_count = 2
-    type      = "tty"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 106 — inference
-# =============================================================================
-resource "proxmox_virtual_environment_container" "inference" {
-  node_name    = local.node
-  vm_id        = 106
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 8192
-    swap      = 4096
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 136
-  }
-
-  network_interface {
-    name     = "eth0"
-    bridge   = "vmbr0"
-    firewall = true
-  }
-
-  initialization {
-    hostname = "inference"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  console {
-    enabled   = true
-    tty_count = 2
-    type      = "tty"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 111 — immich  (PRIVILEGED)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "immich" {
-  node_name    = local.node
-  vm_id        = 111
-  tags         = ["docker", "immich", "photos"]
-  unprivileged = false
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 4
-  }
-
-  memory {
-    dedicated = 8192
-    swap      = 1024
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 32
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "immich"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 110 — ocsirb-web
-# =============================================================================
-resource "proxmox_virtual_environment_container" "ocsirb_web" {
-  node_name    = local.node
-  vm_id        = 110
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
-    type             = "debian"
-  }
-
-  cpu {
-    cores = 1
-  }
-
-  memory {
-    dedicated = 256
-    swap      = 256
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 2
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "ocsirb-web"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  console {
-    enabled   = true
-    tty_count = 2
-    type      = "tty"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 112 — ocsirb-staging
-# =============================================================================
-resource "proxmox_virtual_environment_container" "ocsirb_staging" {
-  node_name    = local.node
-  vm_id        = 112
-  tags         = ["ocsirb", "staging", "website"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 1
-  }
-
-  memory {
-    dedicated = 1024
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 8
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "ocsirb-staging"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 922 — preview-site
-# =============================================================================
-resource "proxmox_virtual_environment_container" "preview_site" {
-  node_name    = local.node
-  vm_id        = 922
-  tags         = ["preview-site", "website"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 1
-  }
-
-  memory {
-    dedicated = 1024
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 8
-  }
-
-  mount_point {
-    volume = "/mnt/truenas"
-    path   = "/mnt/nas"
-    backup = false
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "preview-site"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 997 — production-site
-# =============================================================================
-resource "proxmox_virtual_environment_container" "production_site" {
-  node_name    = local.node
-  vm_id        = 997
-  tags         = ["production-site", "website"]
-  unprivileged = true
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 1
-  }
-
-  memory {
-    dedicated = 1024
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 8
-  }
-
-  mount_point {
-    volume = "/mnt/truenas"
-    path   = "/mnt/nas"
-    backup = false
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "production-site"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 113 — k3s-server  (PRIVILEGED)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "k3s_server" {
-  node_name    = local.node
-  vm_id        = 113
-  unprivileged = false
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 12
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "k3s-server"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 114 — k3s-agent-1  (PRIVILEGED)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "k3s_agent_1" {
-  node_name    = local.node
-  vm_id        = 114
-  unprivileged = false
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 12
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "k3s-agent-1"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
-# =============================================================================
-# CT 115 — k3s-agent-2  (PRIVILEGED)
-# =============================================================================
-resource "proxmox_virtual_environment_container" "k3s_agent_2" {
-  node_name    = local.node
-  vm_id        = 115
-  unprivileged = false
-  started      = true
-
-  operating_system {
-    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    type             = "ubuntu"
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
-    swap      = 0
-  }
-
-  disk {
-    datastore_id = local.storage
-    size         = 12
-  }
-
-  network_interface {
-    name   = "eth0"
-    bridge = "vmbr0"
-  }
-
-  initialization {
-    hostname = "k3s-agent-2"
-
-    dns {
-      servers = ["192.168.50.2", "9.9.9.9"]
-    }
-
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      operating_system,
-      description,
-    ]
-  }
-}
-
 # =============================================================================
 # Cloudflare — ocsirb staging tunnel
 # =============================================================================

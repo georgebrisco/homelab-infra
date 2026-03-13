@@ -1,0 +1,29 @@
+---
+# devices.yml — non-Proxmox devices
+# These are physical devices or VMs not managed by this Terraform config.
+#
+# managed_devices:      get DHCP + DNS + Ansible inventory entries
+# non_managed_reservations: get DHCP + DNS only (no Ansible)
+
+managed_devices:
+  - name: steam
+    mac: "58:47:ca:77:85:fd"
+    ip: "192.168.50.12"
+    ansible_user: root
+    roles: [proxmox_host]
+
+  - name: homeassistant
+    mac: "d8:3a:dd:cd:a8:b6"
+    ip: "192.168.50.11"
+    ansible_user: root
+    roles: [iot, homeautomation]
+
+  - name: truenas
+    mac: "bc:24:11:00:35:85"
+    ip: "192.168.50.44"
+    ansible_user: root
+    roles: [storage]
+
+non_managed_reservations:
+  - { name: xt8-wap,    mac: "7c:10:c9:e4:a9:90", ip: "192.168.50.3" }
+  - { name: linksys-iot, mac: "60:38:e0:d0:65:78", ip: "192.168.50.32" }

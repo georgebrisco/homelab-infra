@@ -1,0 +1,8 @@
+---
+# k3s cluster configuration
+# IPs and container IDs are provided by the dynamic inventory.
+# Only non-inventory config remains here.
+
+k3s_version: ""                              # empty = latest stable
+nfs_server: "192.168.50.44"                  # TrueNAS (not Terraform-managed)
+nfs_path: "/mnt/MainPool/local_data/k8s"

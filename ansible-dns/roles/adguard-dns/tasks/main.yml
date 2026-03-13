@@ -1,0 +1,100 @@
+---
+# Build the full DNS rewrite list from:
+# 1. All inventory hosts (containers + managed physical devices)
+# 2. Non-managed devices from devices.yml
+
+- name: Build DNS rewrite list from inventory hosts
+  set_fact:
+    dns_rewrites_inventory: >-
+      {{
+        (groups['containers'] | default([]) + groups['physical_devices'] | default([]))
+        | map('extract', hostvars)
+        | selectattr('ansible_host', 'defined')
+        | list
+        | map(attribute='inventory_hostname')
+        | zip(
+            (groups['containers'] | default([]) + groups['physical_devices'] | default([]))
+            | map('extract', hostvars)
+            | selectattr('ansible_host', 'defined')
+            | list
+            | map(attribute='ansible_host')
+          )
+        | list
+      }}
+
+- name: Build DNS rewrite list from non-managed devices
+  set_fact:
+    dns_rewrites_unmanaged: >-
+      {{
+        (non_managed_reservations | default([]))
+        | map(attribute='name')
+        | zip(non_managed_reservations | default([]) | map(attribute='ip'))
+        | list
+      }}
+
+- name: Combine all DNS rewrites
+  set_fact:
+    dns_rewrites: "{{ dns_rewrites_inventory + dns_rewrites_unmanaged }}"
+
+- name: Show planned DNS rewrites
+  debug:
+    msg: "{{ item.0 }}.{{ dns_domain }} -> {{ item.1 }}"
+  loop: "{{ dns_rewrites }}"
+  loop_control:
+    label: "{{ item.0 }}.{{ dns_domain }}"
+
+- name: Get existing DNS rewrites from AdGuard
+  uri:
+    url: "{{ adguard_url }}/control/rewrite/list"
+    method: GET
+    url_username: "{{ adguard_user | default('admin') }}"
+    url_password: "{{ adguard_password | default('admin') }}"
+    force_basic_auth: true
+    return_content: true
+    status_code: [200]
+  register: existing_rewrites
+  failed_when: false
+
+- name: Warn if AdGuard API is unreachable
+  debug:
+    msg: "WARNING: Could not reach AdGuard API (status {{ existing_rewrites.status | default('unknown') }}). Skipping DNS updates. Set adguard_user/adguard_password in vault."
+  when: existing_rewrites.status is not defined or existing_rewrites.status != 200
+
+- name: Build list of existing rewrite domains
+  set_fact:
+    existing_domains: "{{ (existing_rewrites.json | default([])) | map(attribute='domain') | list }}"
+  when: existing_rewrites.status is defined and existing_rewrites.status == 200
+
+- name: Delete stale rewrites for our domain
+  uri:
+    url: "{{ adguard_url }}/control/rewrite/delete"
+    method: POST
+    url_username: "{{ adguard_user | default('admin') }}"
+    url_password: "{{ adguard_password | default('admin') }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      domain: "{{ item }}"
+      answer: ""
+    status_code: [200]
+  loop: "{{ existing_domains | default([]) | select('match', '.*\\.' + dns_domain + '$') | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: existing_rewrites.status is defined and existing_rewrites.status == 200
+
+- name: Create DNS rewrites
+  uri:
+    url: "{{ adguard_url }}/control/rewrite/add"
+    method: POST
+    url_username: "{{ adguard_user | default('admin') }}"
+    url_password: "{{ adguard_password | default('admin') }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      domain: "{{ item.0 }}.{{ dns_domain }}"
+      answer: "{{ item.1 }}"
+    status_code: [200]
+  loop: "{{ dns_rewrites }}"
+  loop_control:
+    label: "{{ item.0 }}.{{ dns_domain }}"
+  when: existing_rewrites.status is defined and existing_rewrites.status == 200

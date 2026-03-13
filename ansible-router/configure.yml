@@ -1,18 +1,41 @@
 ---
-# Run from the manager (CT 107, 192.168.50.99)
-# This playbook runs entirely on localhost — all Omada config is sent via
-# the controller's REST API, no SSH connection to the router needed.
+# Configure TP-Link ER707-M2 via Omada Controller API
+#
+# DHCP reservations are built from:
+#   1. Terraform outputs (all LXC containers)
+#   2. devices.yml managed_devices (physical hosts)
+#   3. devices.yml non_managed_reservations (unmanaged devices)
 #
 # Usage:
-#   ansible-playbook configure.yml -i inventory.ini
-#
-# Dry-run (check mode not fully supported for uri tasks, but --diff shows vars):
-#   ansible-playbook configure.yml -i inventory.ini --check
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-router/configure.yml
 
 - name: Configure TP-Link ER707-M2 via Omada Controller API
   hosts: localhost
   connection: local
   gather_facts: false
+
+  pre_tasks:
+    - name: Load Terraform outputs for DHCP reservations
+      set_fact:
+        tf_outputs: "{{ lookup('pipe', 'terraform -chdir=' + playbook_dir + '/.. output -json') | from_json }}"
+
+    - name: Load devices.yml
+      include_vars:
+        file: "{{ playbook_dir }}/../devices.yml"
+
+    - name: Build combined DHCP reservation list
+      set_fact:
+        dhcp_reservations: >-
+          {{
+            tf_outputs.dhcp_reservations.value
+            + (managed_devices | json_query('[].{name: name, mac: mac, ip: ip}'))
+            + non_managed_reservations
+          }}
+
+    - name: Show reservation count
+      debug:
+        msg: "Total DHCP reservations: {{ dhcp_reservations | length }} ({{ tf_outputs.dhcp_reservations.value | length }} containers + {{ managed_devices | length }} managed devices + {{ non_managed_reservations | length }} non-managed)"
 
   roles:
     - role: omada-router

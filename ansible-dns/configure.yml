@@ -1,0 +1,27 @@
+---
+# Configure AdGuard Home local DNS rewrites from inventory
+#
+# Every host in the inventory gets a hostname.homelab DNS rewrite.
+# Non-managed devices from devices.yml also get entries.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-dns/configure.yml
+
+- name: Configure AdGuard Home local DNS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    adguard_url: "http://192.168.50.2:3000"
+    dns_domain: "homelab"
+    # adguard_user / adguard_password should come from vault.yml
+
+  pre_tasks:
+    - name: Load devices.yml for non-managed entries
+      include_vars:
+        file: "{{ playbook_dir }}/../devices.yml"
+
+  roles:
+    - role: adguard-dns
