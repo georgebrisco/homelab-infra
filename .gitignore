@@ -15,7 +15,6 @@ terraform.rc
 secrets.auto.tfvars
 ansible-router/group_vars/all/secrets.yml
 ansible-k3s/group_vars/all/vault.yml
-ansible-k3s/inventory.ini
 manifests/portfolio/secret.yaml
 
 # OS
