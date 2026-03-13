@@ -181,16 +181,23 @@ All currently use the same password. Phase 2 will address password rotation and 
 
 ## SSH Key
 
-All containers are provisioned with the `mgmt-lxc` SSH key:
+Manager's key (deployed to all 17 containers + Proxmox host on 2026-03-13):
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICuCEpkiokrOAr/t9ju7k0enUOJJAsJICyQj0/Wqmq6j mgmt-lxc
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp george@IvorTheEngine
 ```
-Phase 2 will replace this with the manager's actual SSH key pair.
+HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 
 ## Known Issues / Technical Debt
 
-### Security (Phase 2 — next)
-1. **SSH keys**: All containers use the same `mgmt-lxc` key. Manager should generate its own keypair and deploy it.
+### Security (deferred — do after Phase 3)
+
+> **Decision**: Phase 2 security hardening was deliberately deferred. It is orthogonal to
+> Phase 3 reproducibility work and can be done at any time. The only accumulating cost is
+> that new roles written in Phase 3 will store credentials in plaintext until vault
+> encryption is set up. The Terraform state file is local-only (not backed up), but the
+> locals map contains all vm_ids so re-import is mechanical if state is lost.
+> Remote backend was rejected in favour of keeping DR simple (git + known vm_ids = recovery).
+1. **SSH keys**: ~~DONE~~ Manager key deployed to all containers + Proxmox host. HomeAssistant and TrueNAS still need it manually.
 2. **Password reuse**: Single password across Proxmox, containers, and Ansible. Needs rotation + per-service passwords.
 3. **No encryption at rest**: secrets.auto.tfvars and vault.yml are plaintext. Should use ansible-vault and consider SOPS/age.
 4. **No remote Terraform backend**: State is local on manager. Should move to a remote backend (e.g., Consul, S3, or PostgreSQL on TrueNAS).

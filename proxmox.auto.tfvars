@@ -7,5 +7,5 @@ proxmox_node     = "steam"
 proxmox_storage  = "local-lvm"
 
 # SSH key deployed into every container at creation time
-# NOTE: This is the mgmt-lxc key. Phase 2 will update to the manager's actual key.
-ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICuCEpkiokrOAr/t9ju7k0enUOJJAsJICyQj0/Wqmq6j mgmt-lxc"
+# Manager key (george@IvorTheEngine) — deployed to all existing containers 2026-03-13
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp george@IvorTheEngine"
