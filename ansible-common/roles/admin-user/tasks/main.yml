@@ -6,12 +6,25 @@
 #   - Proxmox host (Debian)
 #   - TrueNAS SCALE (Debian — apt blocked, sudoers has no @includedir)
 #   - Gardener Pi (Debian)
-#   - Home Assistant OS (Alpine — wheel group for sudo, AllowUsers for SSH)
+#
+# Skipped on:
+#   - Home Assistant OS (Alpine appliance — ephemeral root filesystem,
+#     user changes don't persist across supervisor restarts. Use the
+#     built-in 'hassio' user instead.)
 
-# --- Detect OS family ---
-- name: Detect Alpine (Home Assistant OS)
+# --- Skip HA OS (ephemeral filesystem, changes don't persist) ---
+- name: Detect Home Assistant OS
   set_fact:
-    is_alpine: "{{ ansible_os_family == 'Alpine' or (ansible_distribution | default('')) == 'Alpine' }}"
+    is_haos: "{{ (ansible_os_family == 'Alpine' or (ansible_distribution | default('')) == 'Alpine') }}"
+
+- name: Skip Home Assistant OS
+  debug:
+    msg: "Skipping admin-user on {{ inventory_hostname }} — HA OS has an ephemeral filesystem. Use the built-in 'hassio' user."
+  when: is_haos
+
+- name: End role for HA OS hosts
+  meta: end_host
+  when: is_haos
 
 # --- Detect TrueNAS (no @includedir in sudoers) ---
 - name: Check for @includedir in sudoers
@@ -20,13 +33,12 @@
   changed_when: false
   failed_when: false
   become: true
-  when: not is_alpine
 
 # --- Create user ---
 - name: Create admin user
   user:
     name: "{{ admin_username }}"
-    shell: "{{ '/bin/ash' if is_alpine else admin_shell }}"
+    shell: "{{ admin_shell }}"
     create_home: true
     state: present
   become: true
@@ -40,46 +52,26 @@
     exclusive: false
   become: true
 
-# --- SSH: Alpine/HA — add admin to AllowUsers if sshd restricts it ---
-- name: Check if sshd_config restricts AllowUsers
-  command: grep -c '^AllowUsers' /etc/ssh/sshd_config
-  register: sshd_allowusers
-  changed_when: false
-  failed_when: false
-  become: true
-  when: is_alpine
-
-- name: Add admin to AllowUsers in sshd_config
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^AllowUsers'
-    line: "AllowUsers hassio {{ admin_username }}"
-    validate: "sshd -t -f %s"
-  become: true
-  when: is_alpine and sshd_allowusers.rc == 0 and sshd_allowusers.stdout | int > 0
-  notify: restart sshd
-
-# --- Sudo: Debian/Ubuntu (sudoers.d drop-in) ---
+# --- Sudo ---
 - name: Check if sudo is installed
   command: which sudo
   register: sudo_check
   changed_when: false
   failed_when: false
-  when: not is_alpine
 
-- name: Install sudo package (Debian — skip if apt is broken or blocked)
+- name: Install sudo package (skip if apt is broken or blocked)
   apt:
     name: sudo
     state: present
   become: true
-  when: not is_alpine and ansible_pkg_mgr == 'apt' and sudo_check.rc != 0
+  when: ansible_pkg_mgr == 'apt' and sudo_check.rc != 0
   register: sudo_install
   failed_when: false
 
 - name: Warn if sudo could not be installed
   debug:
     msg: "WARNING: sudo not available and could not be installed on {{ inventory_hostname }}. Admin user will not have sudo."
-  when: not is_alpine and sudo_check.rc != 0 and (sudo_install is defined and sudo_install.rc is defined and sudo_install.rc != 0)
+  when: sudo_check.rc != 0 and (sudo_install is defined and sudo_install.rc is defined and sudo_install.rc != 0)
 
 # Hosts with @includedir: use drop-in file (standard Debian/Ubuntu)
 - name: Create sudoers drop-in for admin
@@ -89,7 +81,7 @@
     mode: "0440"
     validate: "visudo -cf %s"
   become: true
-  when: not is_alpine and sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int > 0
+  when: sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int > 0
 
 # Hosts without @includedir (e.g. TrueNAS): add directly to /etc/sudoers
 - name: Add admin to /etc/sudoers directly (no includedir)
@@ -99,13 +91,4 @@
     line: "{{ admin_username }} ALL=(ALL:ALL) NOPASSWD: ALL"
     validate: "visudo -cf %s"
   become: true
-  when: not is_alpine and sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int == 0
-
-# --- Sudo: Alpine (add to wheel group, which already has NOPASSWD) ---
-- name: Add admin to wheel group (Alpine / HA OS)
-  user:
-    name: "{{ admin_username }}"
-    groups: wheel
-    append: true
-  become: true
-  when: is_alpine
+  when: sudo_check.rc == 0 and sudoers_includedir.stdout | default('0') | int == 0
