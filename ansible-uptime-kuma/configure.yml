@@ -1,0 +1,13 @@
+---
+# Deploy Uptime Kuma status monitoring
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-uptime-kuma/configure.yml
+
+- name: Deploy Uptime Kuma
+  hosts: uptime_kuma_hosts
+  gather_facts: true
+
+  roles:
+    - role: uptime-kuma

@@ -1,0 +1,90 @@
+---
+# Install and configure Uptime Kuma
+# Assumes Node.js is already installed (or installs it from system packages).
+
+- name: Ensure Node.js is installed
+  apt:
+    name: nodejs
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  failed_when: false
+
+- name: Verify Node.js is available
+  command: node --version
+  register: node_version
+  changed_when: false
+
+- name: Create uptime-kuma system user
+  user:
+    name: uptime-kuma
+    system: true
+    shell: /usr/sbin/nologin
+    home: /opt/uptime-kuma
+    create_home: false
+
+- name: Check if Uptime Kuma is installed
+  stat:
+    path: /opt/uptime-kuma/server/server.js
+  register: uk_installed
+
+- name: Set Uptime Kuma version
+  set_fact:
+    uptime_kuma_version: "{{ uptime_kuma_version | default('1.23.16') }}"
+
+- name: Clone Uptime Kuma
+  git:
+    repo: https://github.com/louislam/uptime-kuma.git
+    dest: /opt/uptime-kuma
+    version: "{{ uptime_kuma_version }}"
+    force: false
+  when: not uk_installed.stat.exists
+
+- name: Install npm dependencies
+  command: npm ci --production
+  args:
+    chdir: /opt/uptime-kuma
+  when: not uk_installed.stat.exists
+
+- name: Run Uptime Kuma setup
+  command: node server/setup-database.js
+  args:
+    chdir: /opt/uptime-kuma
+  environment:
+    NODE_ENV: production
+  when: not uk_installed.stat.exists
+
+- name: Set ownership
+  file:
+    path: /opt/uptime-kuma
+    owner: uptime-kuma
+    group: uptime-kuma
+    recurse: true
+
+- name: Create Uptime Kuma systemd service
+  copy:
+    content: |
+      [Unit]
+      Description=Uptime Kuma
+      After=network.target
+
+      [Service]
+      User=uptime-kuma
+      WorkingDirectory=/opt/uptime-kuma
+      ExecStart=/usr/bin/node server/server.js --port=3001 --data-dir=/opt/uptime-kuma/data
+      Restart=always
+      RestartSec=5
+      Environment=NODE_ENV=production
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/uptime-kuma.service
+    mode: "0644"
+  notify: restart uptime-kuma
+
+- name: Enable and start Uptime Kuma
+  systemd:
+    name: uptime-kuma
+    enabled: true
+    state: started
+    daemon_reload: true
