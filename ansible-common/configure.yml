@@ -15,7 +15,7 @@
     - role: node-exporter
 
 - name: Deploy baseline services to physical devices
-  hosts: proxmox_host
+  hosts: physical_devices
   gather_facts: true
 
   roles:

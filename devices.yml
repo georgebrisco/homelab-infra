@@ -15,7 +15,7 @@ managed_devices:
   - name: homeassistant
     mac: "d8:3a:dd:cd:a8:b6"
     ip: "192.168.50.11"
-    ansible_user: root
+    ansible_user: hassio
     roles: [iot, homeautomation]
 
   - name: truenas
