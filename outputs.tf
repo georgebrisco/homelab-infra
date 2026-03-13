@@ -53,8 +53,8 @@ output "cloudflare_tunnels" {
   description = "Tunnel IDs for cloudflared configuration"
   value = {
     ocsirb_staging = cloudflare_zero_trust_tunnel_cloudflared.ocsirb_staging.id
-    tbs_preview    = cloudflare_zero_trust_tunnel_cloudflared.tbs_preview.id
-    tbs_production = cloudflare_zero_trust_tunnel_cloudflared.tbs_production.id
+    preview_site    = cloudflare_zero_trust_tunnel_cloudflared.preview_site.id
+    production_site = cloudflare_zero_trust_tunnel_cloudflared.production_site.id
   }
 }
 
@@ -68,7 +68,7 @@ output "cloudflare_tunnel_tokens" {
   sensitive   = true
   value = {
     ocsirb_staging = cloudflare_zero_trust_tunnel_cloudflared.ocsirb_staging.tunnel_token
-    tbs_preview    = cloudflare_zero_trust_tunnel_cloudflared.tbs_preview.tunnel_token
-    tbs_production = cloudflare_zero_trust_tunnel_cloudflared.tbs_production.tunnel_token
+    preview_site    = cloudflare_zero_trust_tunnel_cloudflared.preview_site.tunnel_token
+    production_site = cloudflare_zero_trust_tunnel_cloudflared.production_site.tunnel_token
   }
 }

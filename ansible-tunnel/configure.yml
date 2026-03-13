@@ -4,6 +4,10 @@
 # Installs cloudflared, configures it with the tunnel token from Terraform,
 # and enables the systemd service.
 #
+# Convention: the Terraform tunnel resource name matches the container key
+# in local.containers. The inventory script provides container_key as a
+# host var, so the token lookup is just tunnel_tokens[container_key].
+#
 # Usage:
 #   cd /root/projects/homelab-infra
 #   ansible-playbook -i scripts/terraform_inventory.py ansible-tunnel/configure.yml
@@ -12,13 +16,6 @@
   hosts: tunnel_hosts
   gather_facts: true
 
-  vars:
-    # Map container hostname → Terraform tunnel key
-    tunnel_token_map:
-      ocsirb-staging: ocsirb_staging
-      preview-site: tbs_preview
-      production-site: tbs_production
-
   pre_tasks:
     - name: Load tunnel tokens from Terraform
       set_fact:
@@ -26,9 +23,9 @@
       delegate_to: localhost
       run_once: true
 
-    - name: Resolve this host tunnel token
+    - name: Resolve this host's tunnel token by container key
       set_fact:
-        cloudflared_token: "{{ tunnel_tokens[tunnel_token_map[inventory_hostname]] }}"
+        cloudflared_token: "{{ tunnel_tokens[container_key] }}"
 
   roles:
     - role: cloudflared

@@ -547,27 +547,27 @@ resource "cloudflare_record" "ocsirb_staging" {
 }
 
 # =============================================================================
-# Cloudflare — TBS preview tunnel
+# Cloudflare — preview-site tunnel
 # =============================================================================
 
-resource "random_password" "tbs_preview_tunnel_secret" {
+resource "random_password" "preview_site_tunnel_secret" {
   length  = 32
   special = false
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared" "tbs_preview" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "preview_site" {
   account_id = var.cloudflare_account_id
   name       = "preview-site"
-  secret     = base64sha256(random_password.tbs_preview_tunnel_secret.result)
+  secret     = base64sha256(random_password.preview_site_tunnel_secret.result)
 
   lifecycle {
     ignore_changes = [secret]
   }
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "tbs_preview" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "preview_site" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tbs_preview.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.preview_site.id
 
   config {
     ingress_rule {
@@ -580,37 +580,37 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "tbs_preview" {
   }
 }
 
-resource "cloudflare_record" "tbs_preview" {
+resource "cloudflare_record" "preview_site" {
   zone_id = var.tbs_zone_id
   name    = "preview"
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.tbs_preview.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.preview_site.id}.cfargotunnel.com"
   proxied = true
-  comment = "TBS preview tunnel"
+  comment = "preview-site tunnel"
 }
 
 # =============================================================================
-# Cloudflare — TBS production tunnel
+# Cloudflare — production-site tunnel
 # =============================================================================
 
-resource "random_password" "tbs_production_tunnel_secret" {
+resource "random_password" "production_site_tunnel_secret" {
   length  = 32
   special = false
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared" "tbs_production" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "production_site" {
   account_id = var.cloudflare_account_id
   name       = "production-site"
-  secret     = base64sha256(random_password.tbs_production_tunnel_secret.result)
+  secret     = base64sha256(random_password.production_site_tunnel_secret.result)
 
   lifecycle {
     ignore_changes = [secret]
   }
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "tbs_production" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "production_site" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tbs_production.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.production_site.id
 
   config {
     ingress_rule {
@@ -627,20 +627,20 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "tbs_production" {
   }
 }
 
-resource "cloudflare_record" "tbs_production_www" {
+resource "cloudflare_record" "production_site_www" {
   zone_id = var.tbs_zone_id
   name    = "www"
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.tbs_production.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.production_site.id}.cfargotunnel.com"
   proxied = true
-  comment = "TBS production www tunnel"
+  comment = "production-site www tunnel"
 }
 
-resource "cloudflare_record" "tbs_production_apex" {
+resource "cloudflare_record" "production_site_apex" {
   zone_id = var.tbs_zone_id
   name    = "theteablendstudio.com"
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.tbs_production.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.production_site.id}.cfargotunnel.com"
   proxied = true
-  comment = "TBS production apex tunnel"
+  comment = "production-site apex tunnel"
 }
