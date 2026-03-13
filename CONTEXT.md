@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-13 (after Phase 1 completion).
+> Last updated: 2026-03-13 (after Phase 3.1 cloudflared role).
 
 ## Overview
 
@@ -27,6 +27,9 @@ Single Git repository managing a homelab running on one Proxmox VE host (`steam`
 ## Git History
 
 ```
+d449bc5 Phase 3.1: cloudflared deployment role
+a2fc04b Phase 3.0: Fix SSH access - deploy manager key to all containers
+e8c410a Add LLM context file for project continuity
 40999b6 Update AdGuard DNS credentials and push 22 hostname.homelab rewrites
 2604137 Phase 1: Single source of truth for inventory and state
 6385c78 Fix k3s provisioning for Proxmox LXC containers
@@ -47,7 +50,10 @@ homelab-infra/
 ├── devices.yml                      # Non-Proxmox devices (physical hosts + unmanaged network gear)
 ├── scripts/
 │   └── terraform_inventory.py       # Dynamic Ansible inventory (reads TF state + devices.yml)
-├── ansible-dns/
+├── ansible-tunnel/
+|   |- configure.yml                # Playbook: deploy cloudflared to tunnel_hosts
+|   +- roles/cloudflared/tasks/main.yml
+|- ansible-dns/
 │   ├── configure.yml                # Playbook: push hostname.homelab DNS rewrites to AdGuard
 │   └── roles/adguard-dns/tasks/main.yml
 ├── ansible-router/
@@ -125,7 +131,8 @@ All defined in `local.containers` in `main.tf`. Key fields: vm_id, hostname, res
 | k3s_server_ip | 192.168.50.14 | k3s playbook group vars |
 | k3s_nodes | k3s node details with server/agent role | Inventory script |
 | k3s_container_ids | [113, 114, 115] | lxc-prep role |
-| cloudflare_tunnels | Tunnel IDs for ocsirb_staging, tbs_preview, tbs_production | Future cloudflared roles |
+| cloudflare_tunnels | Tunnel IDs for ocsirb_staging, tbs_preview, tbs_production | Reference |
+| cloudflare_tunnel_tokens | Tunnel tokens (sensitive) for cloudflared auth | ansible-tunnel playbook |
 | dns_servers | [192.168.50.2, 9.9.9.9] | Reference |
 
 ## Dynamic Inventory Groups
@@ -152,7 +159,7 @@ Three Zero Trust tunnels managed by Terraform:
 | tbs_preview | preview-site (.22) | preview.theteablendstudio.com | http://localhost:3000 |
 | tbs_production | production-site (.24) | theteablendstudio.com + www | http://localhost:3000 |
 
-**Note**: cloudflared is not yet deployed to the tunnel containers via Ansible. Tunnel tokens from Terraform output need to be configured on each container. This is a Phase 3 task.
+cloudflared is deployed via `ansible-playbook -i scripts/terraform_inventory.py ansible-tunnel/configure.yml`. Tokens come from the `cloudflare_tunnel_tokens` Terraform output.
 
 ## Playbook Usage
 
@@ -164,6 +171,9 @@ ansible-playbook -i ansible-router/inventory.ini ansible-router/configure.yml
 
 # DNS: Push hostname.homelab rewrites to AdGuard Home
 ansible-playbook -i scripts/terraform_inventory.py ansible-dns/configure.yml
+
+# Tunnels: Deploy/update cloudflared on tunnel containers
+ansible-playbook -i scripts/terraform_inventory.py ansible-tunnel/configure.yml
 
 # k3s: Full cluster provision (lxc-prep → base → server → agents → NFS → kubeconfig)
 ansible-playbook -i scripts/terraform_inventory.py ansible-k3s/provision.yml
@@ -205,7 +215,7 @@ HomeAssistant (.11) and TrueNAS (.44) still need this key pushed manually.
 6. **AdGuard credentials in plaintext**: adguard_user/password are inline in ansible-dns/configure.yml.
 
 ### Reproducibility (Phase 3)
-7. **No cloudflared deployment roles**: Tunnel containers don't have cloudflared installed/configured via Ansible.
+7. **cloudflared deployment roles**: ~~DONE~~ ansible-tunnel role deploys and configures cloudflared from Terraform tokens.
 8. **No service deployment roles**: Monitoring, Immich, PhotoPrism, Jupyter, Inference — all manually configured.
 9. **k8s manifests not in CI/CD**: manifests/ directory exists but isn't applied automatically.
 10. **No backup strategy**: No automated backups of Proxmox, TrueNAS, or application data.
