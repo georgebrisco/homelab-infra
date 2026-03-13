@@ -14,7 +14,8 @@ Single Git repository managing a homelab running on one Proxmox VE host (`steam`
 1. **Single source of truth**: The `local.containers` map in `main.tf` defines every Proxmox container. `devices.yml` defines non-Proxmox devices. Everything else is derived.
 2. **Dependency chain**: Edit locals → `terraform apply` → `ansible-playbook -i scripts/terraform_inventory.py <playbook>`. The inventory script calls Terraform state directly — no intermediate cache.
 3. **DNS-first**: All inter-service communication uses `hostname.homelab` names resolved by AdGuard Home (192.168.50.2). Applications should never hardcode IPs.
-4. **Role-based grouping**: Each container has a `roles` list. The inventory script auto-generates Ansible groups from these (e.g., role `media` → group `media_hosts`). Special roles `k3s_server`, `k3s_agent`, and `tunnel` map to dedicated groups.
+4. **Convention over configuration**: Naming conventions and standardisation are preferred over mapping tables, complex scripts, or extra config. If two things need to relate to each other, they should share the same name (e.g., tunnel resource names match container keys).
+5. **Role-based grouping**: Each container has a `roles` list. The inventory script auto-generates Ansible groups from these (e.g., role `media` → group `media_hosts`). Special roles `k3s_server`, `k3s_agent`, and `tunnel` map to dedicated groups.
 
 ## Network
 

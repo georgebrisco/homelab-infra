@@ -1,0 +1,15 @@
+---
+# Deploy common baseline services to all containers
+#
+# Currently: node_exporter (Prometheus metrics on :9100)
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-common/configure.yml
+
+- name: Deploy baseline services to all containers
+  hosts: containers
+  gather_facts: true
+
+  roles:
+    - role: node-exporter
