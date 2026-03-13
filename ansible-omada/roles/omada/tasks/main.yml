@@ -1,0 +1,36 @@
+---
+# TP-Link Omada Controller
+# Ensures Java + MongoDB are installed and the controller service is running.
+# The actual Omada .deb package is installed manually (TP-Link distribution).
+
+- name: Install Java runtime
+  apt:
+    name: openjdk-17-jre-headless
+    state: present
+    update_cache: true
+
+- name: Check if MongoDB is installed
+  command: mongod --version
+  register: mongo_version
+  changed_when: false
+  failed_when: false
+
+- name: Check if Omada Controller is installed
+  stat:
+    path: /opt/tplink/EAPController/bin
+  register: omada_installed
+
+- name: Warn if Omada not installed
+  debug:
+    msg: >
+      Omada Controller not found at /opt/tplink/EAPController.
+      Install the TP-Link .deb package manually:
+      dpkg -i Omada_SDN_Controller_*.deb && apt-get -f install
+  when: not omada_installed.stat.exists
+
+- name: Ensure Omada Controller is enabled and started
+  service:
+    name: tpeap
+    enabled: true
+    state: started
+  when: omada_installed.stat.exists

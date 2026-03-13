@@ -1,0 +1,16 @@
+---
+# Deploy TP-Link Omada Controller
+#
+# The Omada Controller is installed via TP-Link official .deb package.
+# This role ensures Java, MongoDB, and the controller are in place.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-omada/configure.yml
+
+- name: Deploy Omada Controller
+  hosts: omada_hosts
+  gather_facts: true
+
+  roles:
+    - role: omada

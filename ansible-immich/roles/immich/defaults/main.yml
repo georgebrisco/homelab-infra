@@ -1,0 +1,8 @@
+---
+# Immich defaults — override in group_vars or host_vars
+immich_upload_location: /mnt/photos/immich
+immich_db_location: /opt/immich/postgres
+immich_version: v2
+immich_db_password: postgres
+immich_db_username: postgres
+immich_db_name: immich

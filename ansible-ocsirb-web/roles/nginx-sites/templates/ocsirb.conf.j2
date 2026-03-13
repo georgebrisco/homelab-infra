@@ -1,0 +1,29 @@
+# Ocsirb Environmental Monitoring — managed by Ansible
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    root /var/www/ocsirb;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+        include snippets/security-headers.conf;
+    }
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_types text/css text/javascript application/javascript image/svg+xml;
+
+    location ~* \.(css|js|svg|png|ico)$ {
+        expires 7d;
+        add_header Cache-Control "public, no-transform";
+        include snippets/security-headers.conf;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}

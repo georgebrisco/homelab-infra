@@ -1,0 +1,70 @@
+---
+# Immich — Docker Compose deployment
+# Ensures Docker is installed, compose file + env are in place, stack is running.
+
+- name: Install Docker prerequisites
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  shell: |
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+  args:
+    creates: /etc/apt/keyrings/docker.asc
+
+- name: Add Docker apt repository
+  shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+    > /etc/apt/sources.list.d/docker.list
+  args:
+    creates: /etc/apt/sources.list.d/docker.list
+
+- name: Install Docker
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Create Immich directory
+  file:
+    path: /opt/immich
+    state: directory
+    mode: "0755"
+
+- name: Deploy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/immich/docker-compose.yml
+    mode: "0644"
+  notify: restart immich
+
+- name: Deploy .env file
+  template:
+    src: env.j2
+    dest: /opt/immich/.env
+    mode: "0600"
+  notify: restart immich
+
+- name: Ensure upload directory exists
+  file:
+    path: "{{ immich_upload_location }}"
+    state: directory
+    mode: "0755"
+
+- name: Start Immich stack
+  shell: docker compose up -d
+  args:
+    chdir: /opt/immich
+  changed_when: false

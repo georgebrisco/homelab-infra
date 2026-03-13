@@ -1,0 +1,67 @@
+---
+# ocsirb-web — Nginx serving two static sites
+# Ensures nginx installed, site configs deployed, sites enabled.
+
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Ensure web root directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+  loop:
+    - /var/www/ocsirb
+    - /var/www/site-react
+
+- name: Deploy security headers snippet
+  template:
+    src: security-headers.conf.j2
+    dest: /etc/nginx/snippets/security-headers.conf
+    mode: "0644"
+  notify: reload nginx
+
+- name: Deploy ocsirb site config
+  template:
+    src: ocsirb.conf.j2
+    dest: /etc/nginx/sites-available/ocsirb
+    mode: "0644"
+  notify: reload nginx
+
+- name: Deploy React site config
+  template:
+    src: site-react.conf.j2
+    dest: /etc/nginx/sites-available/site-react
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable ocsirb site
+  file:
+    src: /etc/nginx/sites-available/ocsirb
+    dest: /etc/nginx/sites-enabled/ocsirb
+    state: link
+  notify: reload nginx
+
+- name: Enable React site
+  file:
+    src: /etc/nginx/sites-available/site-react
+    dest: /etc/nginx/sites-enabled/site-react
+    state: link
+  notify: reload nginx
+
+- name: Remove default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: started

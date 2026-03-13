@@ -1,0 +1,14 @@
+[Unit]
+Description=PhotoPrism service
+After=network.target
+
+[Service]
+Type=forking
+User=root
+WorkingDirectory=/opt/photoprism
+EnvironmentFile=/opt/photoprism/config/.env
+ExecStart=/opt/photoprism/bin/photoprism up -d
+ExecStop=/opt/photoprism/bin/photoprism down
+
+[Install]
+WantedBy=multi-user.target

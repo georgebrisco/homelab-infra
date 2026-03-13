@@ -1,0 +1,13 @@
+---
+# Deploy ocsirb-staging Nginx (cloudflared handled by ansible-tunnel)
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-ocsirb-staging/configure.yml
+
+- name: Deploy ocsirb-staging
+  hosts: ocsirb_staging_hosts
+  gather_facts: true
+
+  roles:
+    - role: nginx-staging

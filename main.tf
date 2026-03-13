@@ -163,7 +163,7 @@ locals {
       firewall    = false
       console     = false
       dns         = local.dns_servers_default
-      roles       = ["network"]
+      roles       = ["omada"]
     }
     photoprism = {
       vm_id       = 100
@@ -183,7 +183,7 @@ locals {
       firewall    = false
       console     = true
       dns         = local.dns_servers_default
-      roles       = ["media"]
+      roles       = ["photoprism"]
     }
     jupyter = {
       vm_id       = 105
@@ -203,7 +203,7 @@ locals {
       firewall    = false
       console     = true
       dns         = local.dns_servers_default
-      roles       = ["development"]
+      roles       = ["jupyter"]
     }
     inference = {
       vm_id       = 106
@@ -223,7 +223,7 @@ locals {
       firewall    = true
       console     = true
       dns         = local.dns_servers_default
-      roles       = ["ml"]
+      roles       = ["inference"]
     }
     immich = {
       vm_id       = 111
@@ -243,7 +243,7 @@ locals {
       firewall    = false
       console     = false
       dns         = local.dns_servers_default
-      roles       = ["media"]
+      roles       = ["immich"]
     }
     ocsirb_web = {
       vm_id       = 110
@@ -263,7 +263,7 @@ locals {
       firewall    = false
       console     = true
       dns         = local.dns_servers_default
-      roles       = ["web"]
+      roles       = ["ocsirb_web"]
     }
     ocsirb_staging = {
       vm_id       = 112
@@ -283,7 +283,7 @@ locals {
       firewall    = false
       console     = false
       dns         = local.dns_servers_default
-      roles       = ["web", "tunnel"]
+      roles       = ["ocsirb_staging", "tunnel"]
     }
     preview_site = {
       vm_id       = 922

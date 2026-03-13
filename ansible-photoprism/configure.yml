@@ -1,0 +1,13 @@
+---
+# Deploy PhotoPrism photo management
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-photoprism/configure.yml
+
+- name: Deploy PhotoPrism
+  hosts: photoprism_hosts
+  gather_facts: true
+
+  roles:
+    - role: photoprism

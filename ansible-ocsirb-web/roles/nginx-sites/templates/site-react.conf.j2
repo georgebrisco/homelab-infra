@@ -1,0 +1,22 @@
+# React site — managed by Ansible
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name _;
+
+    root /var/www/site-react;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json;
+    gzip_min_length 1024;
+}

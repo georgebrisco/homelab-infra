@@ -1,0 +1,13 @@
+---
+# Deploy Immich photo management (Docker Compose)
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-immich/configure.yml
+
+- name: Deploy Immich
+  hosts: immich_hosts
+  gather_facts: true
+
+  roles:
+    - role: immich

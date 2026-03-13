@@ -1,0 +1,9 @@
+---
+# PhotoPrism defaults — override in group_vars or host_vars
+photoprism_admin_user: admin
+photoprism_admin_password: changeme
+photoprism_port: 2342
+photoprism_storage_path: /mnt/photos/photostream/storage
+photoprism_originals_path: /mnt/photos/photostream_originals
+photoprism_import_path: /mnt/photos/photostream_import
+photoprism_backup_path: /mnt/photos/photoprism_backups

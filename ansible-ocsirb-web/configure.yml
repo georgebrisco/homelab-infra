@@ -1,0 +1,17 @@
+---
+# Deploy ocsirb-web Nginx static sites
+#
+# Serves two sites:
+#   - ocsirb environmental monitoring on :80
+#   - React site on :8080
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-ocsirb-web/configure.yml
+
+- name: Deploy ocsirb-web
+  hosts: ocsirb_web_hosts
+  gather_facts: true
+
+  roles:
+    - role: nginx-sites

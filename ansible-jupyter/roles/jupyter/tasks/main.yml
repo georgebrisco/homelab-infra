@@ -1,0 +1,54 @@
+---
+# Jupyter Notebook — virtualenv deployment
+# Ensures user, virtualenv, jupyter install, and systemd service.
+
+- name: Ensure jupyter user exists
+  user:
+    name: jupyter
+    system: false
+    home: /home/jupyter
+    shell: /bin/bash
+    create_home: true
+
+- name: Install Python3 and venv
+  apt:
+    name:
+      - python3
+      - python3-venv
+      - python3-pip
+    state: present
+    update_cache: true
+
+- name: Create Jupyter virtualenv
+  command: python3 -m venv /home/jupyter/jupyter-env
+  args:
+    creates: /home/jupyter/jupyter-env/bin/python
+  become: true
+  become_user: jupyter
+
+- name: Check if Jupyter is installed in virtualenv
+  stat:
+    path: /home/jupyter/jupyter-env/bin/jupyter
+  register: jupyter_bin
+
+- name: Install Jupyter in virtualenv
+  shell: /home/jupyter/jupyter-env/bin/pip install notebook
+  become: true
+  become_user: jupyter
+  when: not jupyter_bin.stat.exists
+
+- name: Deploy Jupyter systemd service
+  template:
+    src: jupyter.service.j2
+    dest: /etc/systemd/system/jupyter.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart jupyter
+
+- name: Enable and start Jupyter
+  systemd:
+    name: jupyter
+    enabled: true
+    state: started
+    daemon_reload: true

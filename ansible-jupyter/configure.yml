@@ -1,0 +1,13 @@
+---
+# Deploy Jupyter Notebook server
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-jupyter/configure.yml
+
+- name: Deploy Jupyter
+  hosts: jupyter_hosts
+  gather_facts: true
+
+  roles:
+    - role: jupyter

@@ -1,0 +1,5 @@
+---
+- name: restart immich
+  shell: docker compose down && docker compose up -d
+  args:
+    chdir: /opt/immich

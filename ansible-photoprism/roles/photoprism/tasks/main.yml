@@ -1,0 +1,51 @@
+---
+# PhotoPrism — native binary deployment
+# Ensures PhotoPrism binary, config, and systemd service are in place.
+# PhotoPrism was installed via community script — this role manages config.
+
+- name: Ensure PhotoPrism directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/photoprism
+    - /opt/photoprism/config
+    - /opt/photoprism/bin
+
+- name: Check PhotoPrism binary exists
+  stat:
+    path: /opt/photoprism/bin/photoprism
+  register: photoprism_binary
+
+- name: Warn if PhotoPrism binary missing
+  debug:
+    msg: >
+      PhotoPrism binary not found at /opt/photoprism/bin/photoprism.
+      This role manages config only — install PhotoPrism manually or
+      via the community script first.
+  when: not photoprism_binary.stat.exists
+
+- name: Deploy PhotoPrism environment file
+  template:
+    src: env.j2
+    dest: /opt/photoprism/config/.env
+    mode: "0600"
+  notify: restart photoprism
+
+- name: Deploy PhotoPrism systemd service
+  template:
+    src: photoprism.service.j2
+    dest: /etc/systemd/system/photoprism.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart photoprism
+
+- name: Enable and start PhotoPrism
+  systemd:
+    name: photoprism
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: photoprism_binary.stat.exists

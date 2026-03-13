@@ -1,0 +1,10 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: restart photoprism
+  systemd:
+    name: photoprism
+    state: restarted
+  when: photoprism_binary.stat.exists | default(true)
