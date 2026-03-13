@@ -1,0 +1,17 @@
+---
+# Deploy Prometheus + Grafana monitoring stack
+#
+# Prometheus scrape targets are generated from inventory — every host
+# with node_exporter on :9100 is automatically scraped. No hardcoded IPs.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-monitoring/configure.yml
+
+- name: Deploy monitoring stack
+  hosts: monitoring_hosts
+  gather_facts: true
+
+  roles:
+    - role: prometheus
+    - role: grafana

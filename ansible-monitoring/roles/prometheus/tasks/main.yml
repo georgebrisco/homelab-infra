@@ -1,0 +1,113 @@
+---
+# Install and configure Prometheus
+# Scrape targets are generated from inventory — no hardcoded IPs.
+
+- name: Create prometheus system user
+  user:
+    name: prometheus
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create prometheus directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: "0755"
+  loop:
+    - /etc/prometheus
+    - /var/lib/prometheus
+
+- name: Check if prometheus is installed
+  stat:
+    path: /usr/local/bin/prometheus
+  register: prom_binary
+
+- name: Set prometheus version
+  set_fact:
+    prometheus_version: "{{ prometheus_version | default('2.53.4') }}"
+
+- name: Download prometheus
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: /tmp/prometheus.tar.gz
+  when: not prom_binary.stat.exists
+
+- name: Extract prometheus
+  unarchive:
+    src: /tmp/prometheus.tar.gz
+    dest: /tmp/
+    remote_src: true
+  when: not prom_binary.stat.exists
+
+- name: Install prometheus binaries
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+    remote_src: true
+  loop:
+    - prometheus
+    - promtool
+  when: not prom_binary.stat.exists
+  notify: restart prometheus
+
+- name: Install console libraries
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+    dest: "/etc/prometheus/{{ item }}"
+    remote_src: true
+  loop:
+    - console_libraries
+    - consoles
+  when: not prom_binary.stat.exists
+
+- name: Template prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: "0644"
+  notify: restart prometheus
+
+- name: Create prometheus systemd service
+  copy:
+    content: |
+      [Unit]
+      Description=Prometheus
+      After=network.target
+
+      [Service]
+      User=prometheus
+      ExecStart=/usr/local/bin/prometheus \
+        --config.file=/etc/prometheus/prometheus.yml \
+        --storage.tsdb.path=/var/lib/prometheus \
+        --storage.tsdb.retention.time=30d \
+        --web.listen-address=0.0.0.0:9090
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/prometheus.service
+    mode: "0644"
+  notify: restart prometheus
+
+- name: Enable and start prometheus
+  systemd:
+    name: prometheus
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Clean up download
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/prometheus.tar.gz
+    - "/tmp/prometheus-{{ prometheus_version }}.linux-amd64"
+  when: not prom_binary.stat.exists

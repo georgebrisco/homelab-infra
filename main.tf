@@ -143,7 +143,7 @@ locals {
       firewall    = false
       console     = false
       dns         = local.dns_servers_default
-      roles       = ["monitoring"]
+      roles       = ["uptime_kuma"]
     }
     omada = {
       vm_id       = 109

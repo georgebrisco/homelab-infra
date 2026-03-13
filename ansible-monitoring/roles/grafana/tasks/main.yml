@@ -1,0 +1,64 @@
+---
+# Install and configure Grafana
+# Uses the official Grafana apt repository.
+
+- name: Install prerequisite packages
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Add Grafana GPG key
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg.key
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: "0644"
+
+- name: Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
+    filename: grafana
+    state: present
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+    update_cache: true
+
+- name: Template Grafana config
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: grafana
+    mode: "0640"
+  notify: restart grafana
+
+- name: Provision Prometheus as default datasource
+  copy:
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://localhost:9090
+          isDefault: true
+          editable: false
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
+    owner: root
+    group: grafana
+    mode: "0640"
+  notify: restart grafana
+
+- name: Enable and start Grafana
+  systemd:
+    name: grafana-server
+    enabled: true
+    state: started
+    daemon_reload: true
