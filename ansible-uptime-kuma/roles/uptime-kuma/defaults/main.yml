@@ -1,0 +1,7 @@
+---
+uptime_kuma_version: "1.23.16"
+uptime_kuma_repo: "https://github.com/louislam/uptime-kuma.git"
+uptime_kuma_install_dir: /opt/uptime-kuma
+uptime_kuma_data_dir: /opt/uptime-kuma/data
+uptime_kuma_user: uptime-kuma
+uptime_kuma_port: 3001
