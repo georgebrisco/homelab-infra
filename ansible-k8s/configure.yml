@@ -1,0 +1,49 @@
+---
+# Apply k8s manifests to the k3s cluster
+#
+# Runs from the manager node (which has kubectl + kubeconfig).
+# Applies manifests in dependency order: namespaces → storage → workloads.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook ansible-k8s/configure.yml
+#
+# Note: The portfolio app requires a container image to be built and pushed
+# to a registry before the deployment and cronjob will actually start pods.
+# The secret must also be created manually (see manifests/portfolio/secret.yaml.example).
+
+- name: Apply k8s manifests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    manifest_base: "{{ playbook_dir }}/../manifests"
+
+  tasks:
+    - name: Apply namespaces
+      command: kubectl apply -f {{ manifest_base }}/namespaces/
+      register: ns_result
+      changed_when: "'created' in ns_result.stdout or 'configured' in ns_result.stdout"
+
+    - name: Apply storage (PVCs)
+      command: kubectl apply -f {{ manifest_base }}/storage/
+      register: storage_result
+      changed_when: "'created' in storage_result.stdout or 'configured' in storage_result.stdout"
+
+    - name: Apply portfolio workloads
+      command: >
+        kubectl apply
+        -f {{ manifest_base }}/portfolio/deployment-prices.yaml
+        -f {{ manifest_base }}/portfolio/cronjob-email.yaml
+      register: workload_result
+      changed_when: "'created' in workload_result.stdout or 'configured' in workload_result.stdout"
+
+    - name: Show applied resources
+      command: kubectl get all -n portfolio
+      register: resources
+      changed_when: false
+
+    - name: Display cluster state
+      debug:
+        var: resources.stdout_lines
