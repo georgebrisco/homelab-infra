@@ -1,12 +1,13 @@
+# Managed by Ansible — do not edit manually
 [Unit]
 Description=Jupyter Notebook Server
 After=network.target
 
 [Service]
 Type=simple
-User=jupyter
-ExecStart=/home/jupyter/jupyter-env/bin/jupyter notebook
-WorkingDirectory=/home/jupyter
+User={{ jupyter_user }}
+ExecStart={{ jupyter_venv }}/bin/jupyter notebook
+WorkingDirectory={{ jupyter_home }}
 Restart=always
 
 [Install]

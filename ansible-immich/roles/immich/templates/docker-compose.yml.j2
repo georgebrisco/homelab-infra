@@ -1,4 +1,4 @@
-# Immich docker-compose — managed by Ansible
+# Managed by Ansible — do not edit manually
 # Source: https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
 
 name: immich
@@ -15,7 +15,7 @@ services:
     env_file:
       - .env
     ports:
-      - "2283:2283"
+      - "{{ immich_port }}:2283"
     depends_on:
       - redis
       - database

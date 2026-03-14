@@ -1,7 +1,7 @@
 ---
-# Immich — Docker Compose deployment
-# Ensures Docker is installed, compose file + env are in place, stack is running.
+# Deploy Immich photo management via Docker Compose
 
+# --- Docker ---
 - name: Install Docker prerequisites
   apt:
     name:
@@ -19,11 +19,9 @@
   args:
     creates: /etc/apt/keyrings/docker.asc
 
-- name: Add Docker apt repository
+- name: Add Docker repository
   shell: |
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-    https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
-    > /etc/apt/sources.list.d/docker.list
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
   args:
     creates: /etc/apt/sources.list.d/docker.list
 
@@ -37,34 +35,42 @@
     state: present
     update_cache: true
 
-- name: Create Immich directory
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+# --- Immich ---
+- name: Create Immich install directory
   file:
-    path: /opt/immich
+    path: "{{ immich_install_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create upload directory
+  file:
+    path: "{{ immich_upload_location }}"
     state: directory
     mode: "0755"
 
 - name: Deploy docker-compose.yml
   template:
     src: docker-compose.yml.j2
-    dest: /opt/immich/docker-compose.yml
+    dest: "{{ immich_install_dir }}/docker-compose.yml"
     mode: "0644"
   notify: restart immich
 
 - name: Deploy .env file
   template:
     src: env.j2
-    dest: /opt/immich/.env
+    dest: "{{ immich_install_dir }}/.env"
     mode: "0600"
   notify: restart immich
 
-- name: Ensure upload directory exists
-  file:
-    path: "{{ immich_upload_location }}"
-    state: directory
-    mode: "0755"
-
-- name: Start Immich stack
-  shell: docker compose up -d
-  args:
-    chdir: /opt/immich
-  changed_when: false
+- name: Start Immich
+  command:
+    cmd: docker compose up -d
+    chdir: "{{ immich_install_dir }}"
+  register: compose_up
+  changed_when: "'Started' in compose_up.stderr or 'Created' in compose_up.stderr"

@@ -1,5 +1,5 @@
 ---
-# Deploy Jupyter Notebook server
+# Deploy JupyterLab notebook server
 #
 # Usage:
 #   cd /root/projects/homelab-infra

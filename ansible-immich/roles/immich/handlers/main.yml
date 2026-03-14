@@ -1,5 +1,5 @@
 ---
 - name: restart immich
-  shell: docker compose down && docker compose up -d
-  args:
-    chdir: /opt/immich
+  command:
+    cmd: docker compose up -d --force-recreate
+    chdir: "{{ immich_install_dir }}"

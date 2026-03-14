@@ -1,50 +1,71 @@
 ---
-# Jupyter Notebook — virtualenv deployment
-# Ensures user, virtualenv, jupyter install, and systemd service.
+# Deploy JupyterLab notebook server
 
-- name: Ensure jupyter user exists
-  user:
-    name: jupyter
-    system: false
-    home: /home/jupyter
-    shell: /bin/bash
-    create_home: true
-
-- name: Install Python3 and venv
+- name: Install Python and venv
   apt:
     name:
       - python3
       - python3-venv
       - python3-pip
+      - git
     state: present
     update_cache: true
 
-- name: Create Jupyter virtualenv
-  command: python3 -m venv /home/jupyter/jupyter-env
-  args:
-    creates: /home/jupyter/jupyter-env/bin/python
-  become: true
-  become_user: jupyter
+- name: Create jupyter user
+  user:
+    name: "{{ jupyter_user }}"
+    home: "{{ jupyter_home }}"
+    shell: /bin/bash
+    create_home: true
 
-- name: Check if Jupyter is installed in virtualenv
+- name: Create Python virtual environment
+  command:
+    cmd: python3 -m venv {{ jupyter_venv }}
+    creates: "{{ jupyter_venv }}/bin/activate"
+  become: true
+  become_user: "{{ jupyter_user }}"
+
+- name: Install packaging module for Ansible pip support
+  apt:
+    name: python3-packaging
+    state: present
+
+- name: Install JupyterLab and extensions
+  pip:
+    name: "{{ jupyter_packages }}"
+    virtualenv: "{{ jupyter_venv }}"
+    state: present
+  become: true
+  become_user: "{{ jupyter_user }}"
+
+- name: Create Jupyter config directory
+  file:
+    path: "{{ jupyter_home }}/.jupyter"
+    state: directory
+    owner: "{{ jupyter_user }}"
+    group: "{{ jupyter_user }}"
+    mode: "0700"
+
+- name: Deploy Jupyter notebook config
+  template:
+    src: jupyter_notebook_config.py.j2
+    dest: "{{ jupyter_home }}/.jupyter/jupyter_notebook_config.py"
+    owner: "{{ jupyter_user }}"
+    group: "{{ jupyter_user }}"
+    mode: "0644"
+  notify: restart jupyter
+
+- name: Preserve existing password config
   stat:
-    path: /home/jupyter/jupyter-env/bin/jupyter
-  register: jupyter_bin
+    path: "{{ jupyter_home }}/.jupyter/jupyter_server_config.json"
+  register: server_config
 
-- name: Install Jupyter in virtualenv
-  shell: /home/jupyter/jupyter-env/bin/pip install notebook
-  become: true
-  become_user: jupyter
-  when: not jupyter_bin.stat.exists
-
-- name: Deploy Jupyter systemd service
+- name: Deploy systemd service
   template:
     src: jupyter.service.j2
     dest: /etc/systemd/system/jupyter.service
     mode: "0644"
-  notify:
-    - reload systemd
-    - restart jupyter
+  notify: restart jupyter
 
 - name: Enable and start Jupyter
   systemd:
