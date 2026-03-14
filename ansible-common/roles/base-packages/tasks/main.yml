@@ -1,0 +1,8 @@
+- name: Install base packages
+  apt:
+    name:
+      - vim
+      - rsync
+      - curl
+    state: present
+    update_cache: true

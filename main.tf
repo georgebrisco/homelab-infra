@@ -48,7 +48,7 @@ locals {
       template    = local.ubuntu_template
       os_type     = "ubuntu"
       cores       = 1
-      memory      = 256
+      memory      = 512
       swap        = 0
       disk_gb     = 4
       reserved_ip = "192.168.50.2"
