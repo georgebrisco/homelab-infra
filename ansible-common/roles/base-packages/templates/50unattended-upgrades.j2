@@ -1,0 +1,22 @@
+// Managed by Ansible — do not edit manually
+//
+// Security updates only. Full dist-upgrades are done manually.
+
+Unattended-Upgrade::Allowed-Origins {
+{% if ansible_distribution == "Debian" %}
+    "origin=Debian,codename=${distro_codename},label=Debian-Security";
+{% elif ansible_distribution == "Ubuntu" %}
+    "${distro_id}:${distro_codename}-security";
+{% endif %}
+};
+
+// Remove unused kernel packages and dependencies after upgrade
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+// Auto-reboot if required (LXC containers restart in under a second)
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+
+// Log to syslog
+Unattended-Upgrade::SyslogEnable "true";
