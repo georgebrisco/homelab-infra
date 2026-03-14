@@ -1,0 +1,37 @@
+# dolphin web app — managed by Ansible
+# Serves the React/Vite build at {{ dolphin_base_path }}/
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    # Redirect bare /marie to /marie/ (trailing slash required for relative assets)
+    location = {{ dolphin_base_path }} {
+        return 301 {{ dolphin_base_path }}/;
+    }
+
+    location {{ dolphin_base_path }}/ {
+        alias {{ dolphin_web_root }}/;
+        index index.html;
+
+        # React SPA fallback — any unknown path serves index.html
+        try_files $uri $uri/ /index.html;
+
+        # Long-lived cache for hashed assets
+        location ~* \.(js|css|woff2?|png|svg|ico)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Health check
+    location /healthz {
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+}

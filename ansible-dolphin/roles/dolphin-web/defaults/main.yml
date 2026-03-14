@@ -1,0 +1,5 @@
+---
+dolphin_repo: "https://github.com/georgebrisco/dolphin-app.git"
+dolphin_web_root: /var/www/dolphin
+dolphin_build_dir: /opt/dolphin-app
+dolphin_base_path: /marie

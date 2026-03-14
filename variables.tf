@@ -76,3 +76,13 @@ variable "tbs_zone_id" {
   description = "Cloudflare zone ID for TBS domain"
   type        = string
 }
+
+variable "brisco_domain" {
+  description = "Domain name for brisco (e.g. brisco.org.uk)"
+  type        = string
+}
+
+variable "brisco_zone_id" {
+  description = "Cloudflare zone ID for brisco domain"
+  type        = string
+}

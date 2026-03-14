@@ -1,0 +1,103 @@
+---
+# Deploy dolphin-app: a React/Vite static site served at /marie/
+
+# --- System packages ---
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Install Node.js prerequisites
+  apt:
+    name: [curl, ca-certificates, git, rsync]
+    state: present
+
+- name: Check if Node.js is installed
+  command: node --version
+  register: node_check
+  changed_when: false
+  failed_when: false
+
+- name: Add NodeSource LTS repository
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+  when: node_check.rc != 0
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+  when: node_check.rc != 0
+
+# --- Build the app ---
+- name: Clone / update dolphin-app repo
+  git:
+    repo: "{{ dolphin_repo }}"
+    dest: "{{ dolphin_build_dir }}"
+    version: main
+    force: true
+
+- name: Install npm dependencies
+  npm:
+    path: "{{ dolphin_build_dir }}"
+    ci: true
+
+- name: Build the React app
+  command: npm run build
+  args:
+    chdir: "{{ dolphin_build_dir }}"
+  register: npm_build
+  changed_when: true
+
+# --- Deploy built files ---
+- name: Ensure web root exists
+  file:
+    path: "{{ dolphin_web_root }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Sync built files to web root
+  synchronize:
+    src: "{{ dolphin_build_dir }}/dist/"
+    dest: "{{ dolphin_web_root }}/"
+    delete: true
+    recursive: true
+  delegate_to: "{{ inventory_hostname }}"
+  notify: reload nginx
+
+- name: Set web root ownership
+  file:
+    path: "{{ dolphin_web_root }}"
+    owner: www-data
+    group: www-data
+    recurse: true
+
+# --- Nginx config ---
+- name: Deploy nginx site config
+  template:
+    src: dolphin.conf.j2
+    dest: /etc/nginx/sites-available/dolphin
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable dolphin site
+  file:
+    src: /etc/nginx/sites-available/dolphin
+    dest: /etc/nginx/sites-enabled/dolphin
+    state: link
+  notify: reload nginx
+
+- name: Remove default nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: started

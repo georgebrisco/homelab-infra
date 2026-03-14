@@ -1,0 +1,16 @@
+---
+# Deploy dolphin web app to the dolphin container
+#
+# Builds the React/Vite app from source and serves it at /marie/
+# via nginx. Also deploys a cloudflared tunnel to brisco.org.uk/marie.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-dolphin/configure.yml
+
+- name: Deploy dolphin web app
+  hosts: dolphin_hosts
+  gather_facts: true
+
+  roles:
+    - role: dolphin-web

@@ -389,6 +389,27 @@ locals {
       dns         = local.dns_servers_default
       roles       = ["k3s", "k3s_agent"]
     }
+    dolphin = {
+      vm_id        = 117
+      hostname     = "dolphin"
+      template     = "local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst"
+      os_type      = "debian"
+      cores        = 1
+      memory       = 512
+      swap         = 256
+      disk_gb      = 4
+      reserved_ip  = "192.168.50.34"
+      mac          = "bc:24:11:d0:1f:34"
+      explicit_mac = "bc:24:11:d0:1f:34"
+      static       = false
+      privileged   = false
+      tags         = ["dolphin", "web"]
+      mounts       = []
+      firewall     = false
+      console      = false
+      dns          = local.dns_servers_default
+      roles        = ["dolphin", "tunnel"]
+    }
   }
 
   # Derived lookups
@@ -467,9 +488,10 @@ resource "proxmox_virtual_environment_container" "ct" {
   }
 
   network_interface {
-    name     = "eth0"
-    bridge   = "vmbr0"
-    firewall = each.value.firewall ? true : null
+    name        = "eth0"
+    bridge      = "vmbr0"
+    firewall    = each.value.firewall ? true : null
+    mac_address = try(each.value.explicit_mac, null)
   }
 
   initialization {
@@ -643,4 +665,48 @@ resource "cloudflare_record" "production_site_apex" {
   content = "${cloudflare_zero_trust_tunnel_cloudflared.production_site.id}.cfargotunnel.com"
   proxied = true
   comment = "production-site apex tunnel"
+}
+
+# =============================================================================
+# Cloudflare — dolphin app tunnel (brisco.org.uk/marie)
+# =============================================================================
+
+resource "random_password" "dolphin_tunnel_secret" {
+  length  = 32
+  special = false
+}
+
+resource "cloudflare_zero_trust_tunnel_cloudflared" "dolphin" {
+  account_id = var.cloudflare_account_id
+  name       = "dolphin"
+  secret     = base64sha256(random_password.dolphin_tunnel_secret.result)
+
+  lifecycle {
+    ignore_changes = [secret]
+  }
+}
+
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "dolphin" {
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.dolphin.id
+
+  config {
+    ingress_rule {
+      hostname = var.brisco_domain
+      path     = "/marie"
+      service  = "http://localhost:80"
+    }
+    ingress_rule {
+      service = "http_status:404"
+    }
+  }
+}
+
+resource "cloudflare_record" "brisco_apex" {
+  zone_id = var.brisco_zone_id
+  name    = var.brisco_domain
+  type    = "CNAME"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.dolphin.id}.cfargotunnel.com"
+  proxied = true
+  comment = "dolphin app tunnel"
 }
