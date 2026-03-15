@@ -13,6 +13,17 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 sensor: !include_dir_merge_list sensors
 
+# --- YAML-mode dashboards (managed by Ansible) ---
+lovelace:
+  mode: storage
+  dashboards:
+    dashboard-battery:
+      mode: yaml
+      title: Battery Status
+      icon: mdi:battery
+      show_in_sidebar: true
+      filename: dashboards/battery.yaml
+
 [# if ha_light_groups | length > 0 #]
 light:
 [# for group in ha_light_groups #]

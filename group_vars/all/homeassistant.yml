@@ -17,17 +17,66 @@ ha_api_url: "http://homeassistant.homelab:8123"
 # ha_api_token: set in homeassistant_vault.yml
 
 # --- WH51 sensors ---
-# Override here to add friendly names for dashboard use.
-# Just the ID is required; name is optional.
+# ID is the device hex code; name is the plant (from moisture proxy discovery).
 ha_wh51_sensors:
   - id: "0dc5f0"
+    name: Pineapple
   - id: "0dc7b9"
+    name: Left Large Palm
   - id: "0dc862"
+    name: Hibiscus
   - id: "0dca9c"
+    name: Single Cactus
   - id: "0dd020"
+    name: Mixed Cactus
   - id: "0e1a4f"
+    name: New Monstera
   - id: "0e1dd1"
+    name: Banana
   - id: "0e27b3"
+    name: Stripy Pot Monstera
   - id: "0e2851"
+    name: Desert Rose
   - id: "0e28a2"
+    name: Citronella
   - id: "0e29ec"
+    name: Aglaonema
+
+# --- Battery dashboard — device inventory ---
+# Grouped by type so the dashboard template can render sections.
+
+ha_battery_climate_sensors:
+  - entity_id: sensor.balcony_temphumid_battery
+    name: Balcony Outdoor 1
+  - entity_id: sensor.balcony_temphumid2_battery
+    name: Balcony Outdoor 2
+  - entity_id: sensor.bedroom_temphumid_battery
+    name: Bedroom
+  - entity_id: sensor.livingroom_temphumid_battery
+    name: Living Room
+  - entity_id: sensor.sparebedroom_temphumid_battery
+    name: Spare Bedroom
+  - entity_id: sensor.aircon_temphumid_battery
+    name: AC Return
+  - entity_id: sensor.bedroomduct_temphumid_battery
+    name: Bedroom Duct
+  - entity_id: sensor.sparebedroomduct_temphumid_battery
+    name: Spare Bedroom Duct
+
+ha_battery_zigbee_sensors:
+  - entity_id: sensor.frient_a_s_moszb_140_battery
+    name: Bedroom Presence
+  - entity_id: sensor.presencesensor_battery
+    name: Presence Sensor
+
+ha_battery_blind_sensors:
+  - entity_id: sensor.bed_blind_battery
+    name: Bedroom Blind
+  - entity_id: sensor.sparebedroom_blind_battery
+    name: Spare Bedroom Blind
+
+ha_battery_mobile_sensors:
+  - entity_id: sensor.sm_s926u1_battery_level
+    name: George (Samsung)
+  - entity_id: sensor.rosie_battery_level
+    name: Rosie

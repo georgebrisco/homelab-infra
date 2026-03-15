@@ -1,0 +1,79 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+# Battery Status Dashboard — managed by Ansible
+# Source: ansible-homeassistant/roles/ha-config/templates/dashboard-battery.yaml.j2
+
+title: Battery Status
+views:
+  - title: All Batteries
+    path: batteries
+    icon: mdi:battery
+    type: sections
+    sections:
+
+      # ================================================================
+      # Climate & Environment Sensors
+      # ================================================================
+      - title: Climate Sensors
+        type: grid
+        cards:
+[# for sensor in ha_battery_climate_sensors #]
+          - type: tile
+            entity: [% sensor.entity_id %]
+            name: "[% sensor.name %]"
+            color: >
+              {% if states('[% sensor.entity_id %]') | int(0) > 60 %}
+                green
+              {% elif states('[% sensor.entity_id %]') | int(0) > 25 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
+[# endfor #]
+
+      # ================================================================
+      # Zigbee Sensors (Presence, Motion)
+      # ================================================================
+      - title: Zigbee Sensors
+        type: grid
+        cards:
+[# for sensor in ha_battery_zigbee_sensors #]
+          - type: tile
+            entity: [% sensor.entity_id %]
+            name: "[% sensor.name %]"
+[# endfor #]
+
+      # ================================================================
+      # Blinds
+      # ================================================================
+      - title: Blinds
+        type: grid
+        cards:
+[# for sensor in ha_battery_blind_sensors #]
+          - type: tile
+            entity: [% sensor.entity_id %]
+            name: "[% sensor.name %]"
+[# endfor #]
+
+      # ================================================================
+      # Soil Moisture Sensors (WH51)
+      # ================================================================
+      - title: Soil Sensors (WH51)
+        type: grid
+        cards:
+[# for sensor in ha_wh51_sensors #]
+          - type: tile
+            entity: sensor.wh51_[% sensor.id %]_battery_pct
+            name: "[% sensor.name | default('WH51 ' + sensor.id) %]"
+[# endfor #]
+
+      # ================================================================
+      # Mobile Devices
+      # ================================================================
+      - title: Mobile Devices
+        type: grid
+        cards:
+[# for sensor in ha_battery_mobile_sensors #]
+          - type: tile
+            entity: [% sensor.entity_id %]
+            name: "[% sensor.name %]"
+[# endfor #]
