@@ -110,8 +110,9 @@
 # ============================================================================
 [# for blind in ha_blinds #]
 [# if blind.presence_sensor is defined #]
+[# set blind_slug = blind.entity_id | replace('.', '_') | replace(' ', '_') #]
 
-- id: ansible_blind_autoclose_[% blind.entity_id | regex_replace([^a-z0-9], _) %]
+- id: ansible_blind_autoclose_[% blind_slug %]
   alias: "Blind: Close [% blind.name %] when empty (daytime)"
   description: >
     Closes [% blind.name %] to 1% if the room has been empty for
@@ -119,7 +120,7 @@
   triggers:
     - entity_id: [% blind.presence_sensor %]
       to: "off"
-      for: "00:[% %02d | format(blind.auto_close_delay_minutes | default(30)) %]:00"
+      for: "00:[% '%02d' | format(blind.auto_close_delay_minutes | default(30)) %]:00"
       trigger: state
   conditions:
     - condition: sun
