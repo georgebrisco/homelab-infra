@@ -75,6 +75,18 @@ views:
             icon: mdi:air-filter
             color: cyan
 
+          - type: tile
+            entity: sensor.frient_a_s_moszb_140_temperature
+            name: "Bedroom (Presence)"
+            icon: mdi:motion-sensor
+            color: cyan
+
+          - type: tile
+            entity: sensor.presencesensor_temperature
+            name: "Presence Sensor"
+            icon: mdi:motion-sensor
+            color: cyan
+
       # ── HVAC System ────────────────────────────────────────────
       - type: grid
         title: HVAC System
@@ -164,6 +176,10 @@ views:
                 name: "Spare Bedroom"
               - entity: sensor.master_bedroom_air_sensor_01_temperature_sensor
                 name: "Master (Air Sensor)"
+              - entity: sensor.frient_a_s_moszb_140_temperature
+                name: "Bedroom (Presence)"
+              - entity: sensor.presencesensor_temperature
+                name: "Presence Sensor"
               - entity: climate.t9_thermostat
                 name: "Thermostat Setpoint"
 
