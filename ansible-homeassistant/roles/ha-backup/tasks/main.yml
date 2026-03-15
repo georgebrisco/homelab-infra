@@ -1,13 +1,17 @@
 ---
-# ha-backup — Sync HA backups to TrueNAS for off-box protection
+# ha-backup — HA backup management: scheduled sync to TrueNAS + on-demand restore
 #
-# This runs FROM the HA host, pushing backups to TrueNAS via rsync/scp.
-# HA creates daily automatic backups in /backup/ — this role ensures they
-# are copied to TrueNAS and old copies are pruned.
+# Sync: runs FROM the HA host, pushing backups to TrueNAS via rsync.
+# Restore: pulls the latest backup from TrueNAS and restores via Supervisor API.
 #
 # Prerequisites:
 #   - SSH key access from HA to TrueNAS (or run via manager as jump host)
 #   - Target directory must exist on TrueNAS
+#   - Supervisor API token available (read from container environment)
+
+# ---------------------------------------------------------------
+# Backup sync to TrueNAS (daily cron)
+# ---------------------------------------------------------------
 
 - name: Ensure backup sync script exists
   copy:
@@ -37,3 +41,145 @@
     hour: "6"
     job: "/usr/local/bin/ha-backup-sync.sh >> /var/log/ha-backup-sync.log 2>&1"
     user: root
+
+# ---------------------------------------------------------------
+# Restore script (pull from TrueNAS → Supervisor restore API)
+# ---------------------------------------------------------------
+
+- name: Deploy backup restore script
+  copy:
+    content: |
+      #!/bin/sh
+      # Restore the latest HA backup from TrueNAS — managed by Ansible
+      #
+      # Usage:
+      #   ha-backup-restore.sh              # restore latest backup
+      #   ha-backup-restore.sh <filename>   # restore a specific .tar file
+      #
+      # This script:
+      #   1. Copies the backup .tar from TrueNAS into /backup/
+      #   2. Tells the Supervisor to ingest it
+      #   3. Triggers a full restore (HA will restart)
+      #
+      # WARNING: This will restart Home Assistant and overwrite current state.
+
+      set -e
+
+      REMOTE="{{ ha_backup_target_user }}@{{ ha_backup_target_host }}"
+      REMOTE_PATH="{{ ha_backup_target_path }}"
+      LOCAL_BACKUP_DIR="{{ ha_backup_source_dir }}"
+      TOKEN_FILE="/run/s6/container_environment/SUPERVISOR_TOKEN"
+      SUPERVISOR_URL="http://supervisor"
+
+      if [ ! -f "$TOKEN_FILE" ]; then
+        echo "ERROR: Supervisor token not found at $TOKEN_FILE"
+        echo "This script must be run from within the SSH add-on container."
+        exit 1
+      fi
+
+      TOKEN=$(cat "$TOKEN_FILE")
+
+      # Determine which backup to restore
+      if [ -n "$1" ]; then
+        BACKUP_FILE="$1"
+      else
+        echo "Finding latest backup on TrueNAS..."
+        BACKUP_FILE=$(ssh "$REMOTE" "ls -1t ${REMOTE_PATH}/*.tar 2>/dev/null | head -1")
+        if [ -z "$BACKUP_FILE" ]; then
+          echo "ERROR: No backups found on TrueNAS at ${REMOTE}:${REMOTE_PATH}/"
+          exit 1
+        fi
+      fi
+
+      BASENAME=$(basename "$BACKUP_FILE")
+      echo "Restoring: $BASENAME"
+
+      # Step 1: Copy backup from TrueNAS if not already local
+      if [ ! -f "${LOCAL_BACKUP_DIR}/${BASENAME}" ]; then
+        echo "Copying from TrueNAS..."
+        scp "${REMOTE}:${BACKUP_FILE}" "${LOCAL_BACKUP_DIR}/${BASENAME}"
+      else
+        echo "Backup already exists locally."
+      fi
+
+      # Step 2: Reload the backup list so Supervisor sees the file
+      echo "Refreshing backup list..."
+      curl -sf -X POST \
+        -H "Authorization: Bearer $TOKEN" \
+        "${SUPERVISOR_URL}/backups/reload" > /dev/null
+
+      # Step 3: Find the backup slug from the file
+      sleep 2
+      SLUG=$(curl -sf \
+        -H "Authorization: Bearer $TOKEN" \
+        "${SUPERVISOR_URL}/backups" \
+        | python3 -c "
+      import json, sys, os
+      data = json.load(sys.stdin)
+      target = os.path.splitext('${BASENAME}')[0]
+      for b in data.get('data', {}).get('backups', []):
+          if b.get('slug', '') == target or target in b.get('name', ''):
+              print(b['slug'])
+              break
+      " 2>/dev/null)
+
+      if [ -z "$SLUG" ]; then
+        echo "ERROR: Could not find backup slug for $BASENAME"
+        echo "Available backups:"
+        curl -sf -H "Authorization: Bearer $TOKEN" "${SUPERVISOR_URL}/backups" \
+          | python3 -c "import json,sys; [print(f'  {b[\"slug\"]}  {b[\"name\"]}  {b[\"date\"]}') for b in json.load(sys.stdin).get('data',{}).get('backups',[])]"
+        exit 1
+      fi
+
+      echo "Backup slug: $SLUG"
+      echo ""
+      echo "Starting full restore — HA will restart..."
+      echo "This may take several minutes. SSH connection will drop."
+      echo ""
+
+      # Step 4: Trigger the restore
+      curl -sf -X POST \
+        -H "Authorization: Bearer $TOKEN" \
+        "${SUPERVISOR_URL}/backups/${SLUG}/restore/full" \
+        && echo "Restore initiated." \
+        || echo "ERROR: Restore API call failed."
+    dest: /usr/local/bin/ha-backup-restore.sh
+    mode: "0755"
+
+# ---------------------------------------------------------------
+# On-demand backup trigger via Supervisor API
+# ---------------------------------------------------------------
+
+- name: Deploy backup trigger script
+  copy:
+    content: |
+      #!/bin/sh
+      # Trigger a new HA backup via Supervisor API — managed by Ansible
+      #
+      # Usage: ha-backup-now.sh [backup name]
+      #
+      # Creates a full backup and syncs it to TrueNAS.
+
+      set -e
+
+      TOKEN=$(cat /run/s6/container_environment/SUPERVISOR_TOKEN)
+      NAME="${1:-ansible-$(date +%Y%m%d-%H%M%S)}"
+
+      echo "Creating backup: $NAME"
+      RESULT=$(curl -sf -X POST \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\": \"$NAME\"}" \
+        "http://supervisor/backups/new/full")
+
+      SLUG=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('data',{}).get('slug','unknown'))" 2>/dev/null)
+      echo "Backup created: $SLUG"
+
+      # Sync to TrueNAS immediately
+      if [ -x /usr/local/bin/ha-backup-sync.sh ]; then
+        echo "Syncing to TrueNAS..."
+        /usr/local/bin/ha-backup-sync.sh
+        echo "Done."
+      fi
+    dest: /usr/local/bin/ha-backup-now.sh
+    mode: "0755"

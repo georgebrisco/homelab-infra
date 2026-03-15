@@ -1,0 +1,160 @@
+---
+# ha-addons — Declarative add-on and repository management via Supervisor API
+#
+# The Supervisor API is only accessible from within the SSH add-on container
+# (not via the external HA REST API). We use the ephemeral SUPERVISOR_TOKEN
+# that the container provides at /run/s6/container_environment/SUPERVISOR_TOKEN.
+#
+# This role is idempotent: it checks current state before making changes.
+# Add-ons that are already installed and running are left alone.
+# Options are only updated if they differ from the desired state.
+
+- name: Read Supervisor API token
+  slurp:
+    src: /run/s6/container_environment/SUPERVISOR_TOKEN
+  register: supervisor_token_raw
+
+- name: Set Supervisor token fact
+  set_fact:
+    supervisor_token: "{{ supervisor_token_raw.content | b64decode | trim }}"
+
+# ---------------------------------------------------------------
+# Repositories
+# ---------------------------------------------------------------
+
+- name: Get current add-on repositories
+  uri:
+    url: http://supervisor/store/repositories
+    method: GET
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    return_content: true
+  register: ha_repos_response
+
+- name: Set current repository URLs
+  set_fact:
+    ha_current_repo_urls: "{{ ha_repos_response.json.data | map(attribute='source') | list }}"
+
+- name: Add missing add-on repositories
+  uri:
+    url: http://supervisor/store/repositories
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    body_format: json
+    body:
+      repository: "{{ item }}"
+    status_code: [200, 201]
+  loop: "{{ ha_addon_repositories }}"
+  when: item not in ha_current_repo_urls
+
+# After adding repos, refresh the store so new add-on slugs are available
+- name: Refresh add-on store
+  uri:
+    url: http://supervisor/store/reload
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    status_code: [200, 201]
+  when: ha_addon_repositories | difference(ha_current_repo_urls) | length > 0
+
+# ---------------------------------------------------------------
+# Add-on installation and configuration
+# ---------------------------------------------------------------
+
+- name: Get current add-on list
+  uri:
+    url: http://supervisor/addons
+    method: GET
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    return_content: true
+  register: ha_addons_response
+
+- name: Set installed add-on slugs
+  set_fact:
+    ha_installed_addon_slugs: >-
+      {{ ha_addons_response.json.data.addons
+         | selectattr('state', 'ne', 'unknown')
+         | map(attribute='slug')
+         | list }}
+
+- name: Install missing add-ons
+  uri:
+    url: "http://supervisor/addons/{{ item.slug }}/install"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    status_code: [200, 201]
+    timeout: 300
+  loop: "{{ ha_addons }}"
+  loop_control:
+    label: "{{ item.slug }}"
+  when: item.slug not in ha_installed_addon_slugs
+  register: ha_addon_installs
+
+# ---------------------------------------------------------------
+# Add-on options (only update if options are specified and differ)
+# ---------------------------------------------------------------
+
+- name: Configure add-on options
+  include_tasks: addon_options.yml
+  loop: "{{ ha_addons | selectattr('options', 'defined') | list }}"
+  loop_control:
+    loop_var: addon
+    label: "{{ addon.slug }}"
+
+# ---------------------------------------------------------------
+# Boot mode and start state
+# ---------------------------------------------------------------
+
+- name: Get updated add-on list (post-install)
+  uri:
+    url: http://supervisor/addons
+    method: GET
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    return_content: true
+  register: ha_addons_current
+
+- name: Set boot mode for add-ons
+  uri:
+    url: "http://supervisor/addons/{{ item.slug }}/options"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    body_format: json
+    body:
+      boot: "{{ item.boot | default('auto') }}"
+    status_code: [200, 201]
+  loop: "{{ ha_addons }}"
+  loop_control:
+    label: "{{ item.slug }}"
+  when: >-
+    ha_addons_current.json.data.addons
+    | selectattr('slug', 'eq', item.slug)
+    | map(attribute='boot')
+    | first
+    | default('')
+    != (item.boot | default('auto'))
+
+- name: Start add-ons that should be running
+  uri:
+    url: "http://supervisor/addons/{{ item.slug }}/start"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    status_code: [200, 201]
+    timeout: 120
+  loop: "{{ ha_addons }}"
+  loop_control:
+    label: "{{ item.slug }}"
+  when: >-
+    (item.boot | default('auto')) == 'auto'
+    and (
+      ha_addons_current.json.data.addons
+      | selectattr('slug', 'eq', item.slug)
+      | map(attribute='state')
+      | first
+      | default('unknown')
+    ) != 'started'

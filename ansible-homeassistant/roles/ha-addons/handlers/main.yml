@@ -1,0 +1,14 @@
+---
+# Restart add-ons whose options were changed.
+# We read the supervisor token fresh in case it rotated during a long run.
+
+- name: restart addon
+  uri:
+    url: "http://supervisor/addons/{{ item }}/restart"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    status_code: [200, 201]
+    timeout: 120
+  loop: "{{ ha_addons_to_restart | default([]) }}"
+  when: ha_addons_to_restart is defined and ha_addons_to_restart | length > 0

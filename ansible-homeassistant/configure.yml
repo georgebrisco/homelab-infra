@@ -1,15 +1,16 @@
 ---
-# Deploy Home Assistant YAML configuration
+# Deploy Home Assistant configuration, add-ons, and backups
 #
 # Manages:
 #   - configuration.yaml, automations.yaml, sensor configs (via Jinja templates)
 #   - secrets.yaml (from Ansible Vault)
-#   - Backup sync to TrueNAS
+#   - Add-on installation, configuration, and boot mode (via Supervisor API)
+#   - Backup sync to TrueNAS + restore/trigger scripts
 #
 # Does NOT manage:
 #   - HA installation or updates (HAOS manages itself)
-#   - Add-on installation/config (UI-managed; consider HA CLI automation later)
-#   - Integrations added through the UI
+#   - Integrations added through the UI (config entries)
+#   - HACS custom component installation (HACS manages itself)
 #   - scenes.yaml / scripts.yaml (UI-managed, only created if missing)
 #
 # Prerequisites:
@@ -19,11 +20,16 @@
 #
 # Usage:
 #   cd /root/projects/homelab-infra
-#   ansible-playbook -i scripts/terraform_inventory.py ansible-homeassistant/configure.yml
+#   make homeassistant
 #
-# First run (no API token yet):
-#   ansible-playbook -i scripts/terraform_inventory.py ansible-homeassistant/configure.yml -e ha_reload_method=none
-#   Then manually reload HA, create a long-lived token, and add it to Vault.
+# First run on a fresh HA Yellow (restore from backup first):
+#   1. Flash HAOS, install SSH add-on manually, add your SSH key
+#   2. ssh hassio@<ip> ha-backup-restore.sh   (pulls latest from TrueNAS)
+#   3. After restore completes and HA restarts:
+#      make homeassistant    (applies YAML config + ensures add-ons match)
+#
+# Skip add-on management (config-only run):
+#   ansible-playbook ... -e ha_manage_addons=false
 
 - name: Deploy Home Assistant configuration
   hosts: homeautomation_hosts
@@ -37,4 +43,6 @@
 
   roles:
     - role: ha-config
+    - role: ha-addons
+      when: ha_manage_addons | default(true) | bool
     - role: ha-backup

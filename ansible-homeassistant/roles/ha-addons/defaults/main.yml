@@ -1,0 +1,188 @@
+---
+# ha-addons defaults — declarative add-on & repository management
+#
+# Override in group_vars/all/homeassistant.yml to match your setup.
+# Add-on slugs can be found via: Supervisor API /addons or the HA UI.
+
+# Third-party add-on repositories (beyond the built-in core/local repos).
+# Each entry is a GitHub URL that the Supervisor will register.
+ha_addon_repositories:
+  - https://github.com/hassio-addons/repository            # Community Add-ons
+  - https://github.com/esphome/home-assistant-addon         # ESPHome
+  - https://github.com/expaso/hassos-addons                 # Expaso (TimescaleDB, pgAdmin)
+  - https://github.com/hacs/addons                          # HACS
+  - https://github.com/music-assistant/home-assistant-addon  # Music Assistant
+
+# Add-ons to install and start.
+# slug: the add-on identifier (find it in the Supervisor API or HA UI)
+# boot: "auto" = start on HA boot, "manual" = don't auto-start
+# options: add-on-specific config (merged into the add-on's options.json)
+#
+# NOTE: Options containing secrets (passwords, keys) should be overridden
+# in group_vars/all/homeassistant_vault.yml.
+ha_addons:
+  # --- Core add-ons ---
+  - slug: core_mosquitto
+    boot: auto
+    options:
+      logins:
+        - username: "{{ mqtt_user }}"
+          password: "{{ mqtt_pass }}"
+      require_certificate: false
+      certfile: fullchain.pem
+      keyfile: privkey.pem
+      customize:
+        active: false
+        folder: mosquitto
+
+  - slug: core_zwave_js
+    boot: auto
+    options:
+      log_level: info
+      log_to_file: false
+      log_max_files: 7
+      rf_region: Automatic
+      soft_reset: Automatic
+      device: /dev/serial/by-id/usb-0658_0200-if00
+      s0_legacy_key: "{{ ha_zwave_s0_legacy_key }}"
+      s2_access_control_key: "{{ ha_zwave_s2_access_control_key }}"
+      s2_authenticated_key: "{{ ha_zwave_s2_authenticated_key }}"
+      s2_unauthenticated_key: "{{ ha_zwave_s2_unauthenticated_key }}"
+      lr_s2_access_control_key: "{{ ha_zwave_lr_s2_access_control_key }}"
+      lr_s2_authenticated_key: "{{ ha_zwave_lr_s2_authenticated_key }}"
+      network_key: "{{ ha_zwave_s0_legacy_key }}"
+
+  - slug: core_matter_server
+    boot: auto
+    options:
+      log_level: info
+      log_level_sdk: error
+      beta: false
+      enable_test_net_dcl: false
+
+  - slug: core_openthread_border_router
+    boot: auto
+    options:
+      device: /dev/ttyAMA1
+      baudrate: 460800
+      flow_control: true
+      otbr_log_level: notice
+      firewall: true
+      nat64: false
+      beta: false
+      autoflash_firmware: false
+
+  - slug: core_configurator
+    boot: auto
+
+  # --- Voice assistant pipeline ---
+  - slug: core_whisper
+    boot: auto
+    options:
+      model: auto
+      language: en
+      beam_size: 0
+      custom_model_type: faster-whisper
+      stt_library: auto
+      debug_logging: false
+
+  - slug: core_piper
+    boot: auto
+    options:
+      voice: en_US-lessac-medium
+      speaker: 0
+      length_scale: 1.0
+      noise_scale: 0.667
+      noise_w: 0.333
+      debug_logging: false
+      update_voices: true
+
+  - slug: core_openwakeword
+    boot: auto
+    options:
+      threshold: 0.5
+      trigger_level: 1
+      debug_logging: false
+
+  - slug: core_assist_microphone
+    boot: auto
+
+  # --- Community add-ons ---
+  - slug: a0d7b954_ssh
+    boot: auto
+    options:
+      ssh:
+        username: hassio
+        password: ""
+        authorized_keys: "{{ ha_ssh_authorized_keys }}"
+        sftp: false
+        compatibility_mode: false
+        allow_agent_forwarding: false
+        allow_remote_port_forwarding: false
+        allow_tcp_forwarding: false
+      zsh: true
+      share_sessions: false
+      packages: []
+      init_commands: []
+
+  - slug: a0d7b954_chrony
+    boot: auto
+    options:
+      set_system_clock: true
+      mode: pool
+      ntp_pool: pool.ntp.org
+      ntp_server:
+        - 54.39.13.155
+        - briareus.schulte.org
+
+  - slug: a0d7b954_grafana
+    boot: auto
+    options:
+      plugins: []
+      custom_plugins: []
+      env_vars: []
+      ssl: true
+      certfile: fullchain.pem
+      keyfile: privkey.pem
+
+  # --- Third-party add-ons ---
+  - slug: 77b2833f_timescaledb
+    boot: auto
+    options:
+      databases:
+        - homeassistant
+      timescale_enabled:
+        - homeassistant
+      timescaledb:
+        telemetry: basic
+        maxmemory: 512MB
+        maxcpus: 4
+      max_connections: 50
+      system_packages: []
+      init_commands: []
+
+  - slug: 77b2833f_pgadmin4
+    boot: auto
+    options:
+      ssl: true
+      certfile: fullchain.pem
+      keyfile: privkey.pem
+      system_packages: []
+      init_commands: []
+      leave_front_door_open: false
+
+  - slug: 5c53de3b_esphome
+    boot: auto
+
+# SSH authorized keys for the SSH add-on
+ha_ssh_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp george@IvorTheEngine"
+
+# HACS custom components to verify are installed (informational — HACS
+# manages installation; this list documents what's expected).
+ha_hacs_components:
+  - better_thermostat
+  - ble_monitor
+  - govee
+  - hacs
+  - ltss

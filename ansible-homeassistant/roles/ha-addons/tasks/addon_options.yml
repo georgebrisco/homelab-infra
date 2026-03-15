@@ -1,0 +1,34 @@
+---
+# Included task: compare and update a single add-on's options
+# Called with loop_var: addon
+#
+# Strategy: merge our desired options INTO the current live options,
+# then only push if the merged result differs. This avoids the Supervisor
+# rejecting partial option sets that are missing required fields.
+
+- name: "Get current options for {{ addon.slug }}"
+  uri:
+    url: "http://supervisor/addons/{{ addon.slug }}/info"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    return_content: true
+  register: addon_info
+
+- name: "Update options for {{ addon.slug }}"
+  uri:
+    url: "http://supervisor/addons/{{ addon.slug }}/options"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ supervisor_token }}"
+    body_format: json
+    body:
+      options: "{{ addon_info.json.data.options | combine(addon.options, recursive=True) }}"
+    status_code: [200, 201]
+  when: addon_info.json.data.options | combine(addon.options, recursive=True) != addon_info.json.data.options
+  register: addon_options_changed
+
+- name: "Mark {{ addon.slug }} for restart if options changed"
+  set_fact:
+    ha_addons_to_restart: "{{ (ha_addons_to_restart | default([])) + [addon.slug] }}"
+  when: addon_options_changed is changed
