@@ -1,0 +1,77 @@
+---
+# ha-config — Deploy Home Assistant YAML configuration via SSH
+#
+# This role templates configuration files and pushes them to the HA host.
+# It does NOT manage HA installation, add-ons, or integrations configured
+# through the UI — only the YAML-based configuration layer.
+
+- name: Ensure sensors directory exists
+  file:
+    path: "{{ ha_config_dir }}/sensors"
+    state: directory
+    mode: "0755"
+
+# --- Main configuration file ---
+
+- name: Deploy configuration.yaml
+  template:
+    src: configuration.yaml.j2
+    dest: "{{ ha_config_dir }}/configuration.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
+
+# --- Secrets (from Ansible Vault) ---
+
+- name: Deploy secrets.yaml
+  template:
+    src: secrets.yaml.j2
+    dest: "{{ ha_config_dir }}/secrets.yaml"
+    mode: "0600"
+  no_log: true
+
+# --- Automations ---
+
+- name: Deploy automations.yaml
+  template:
+    src: automations.yaml.j2
+    dest: "{{ ha_config_dir }}/automations.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha automations
+
+# --- Sensor config files ---
+
+- name: Deploy sensor config — extras
+  template:
+    src: sensors/extras.yaml.j2
+    dest: "{{ ha_config_dir }}/sensors/extras.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
+
+- name: Deploy sensor config — WH51 moisture sensors
+  template:
+    src: sensors/rtl433_wh51.yaml.j2
+    dest: "{{ ha_config_dir }}/sensors/rtl433_wh51.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
+
+# --- Empty placeholder files (managed in UI, preserved here) ---
+# scripts.yaml and scenes.yaml are primarily edited in the HA UI.
+# We only create them if they don't exist, to avoid clobbering UI state.
+
+- name: Ensure scripts.yaml exists
+  copy:
+    content: "# Managed in HA UI — Ansible will not overwrite this file.\n"
+    dest: "{{ ha_config_dir }}/scripts.yaml"
+    mode: "0644"
+    force: false
+
+- name: Ensure scenes.yaml exists
+  copy:
+    content: "# Managed in HA UI — Ansible will not overwrite this file.\n"
+    dest: "{{ ha_config_dir }}/scenes.yaml"
+    mode: "0644"
+    force: false

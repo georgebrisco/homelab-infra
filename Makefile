@@ -10,7 +10,7 @@
 INVENTORY = -i scripts/terraform_inventory.py
 ANSIBLE   = ansible-playbook $(INVENTORY)
 
-.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status
+.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant
 
 help:
 	@echo "Terraform:"
@@ -30,6 +30,7 @@ help:
 	@echo "  make ocsirb-staging - ocsirb-staging Nginx"
 	@echo "  make omada          - Omada Controller"
 	@echo "  make dns            - AdGuard DNS rewrites"
+	@echo "  make homeassistant  - Home Assistant YAML config + backup sync"
 	@echo "  make router         - Router DHCP/DNS/routes"
 	@echo "  make k3s            - k3s cluster provision"
 	@echo "  make k8s            - Apply k8s manifests"
@@ -93,10 +94,13 @@ k8s:
 	ansible-playbook ansible-k3s/apply-manifests.yml
 
 
+homeassistant:
+	$(ANSIBLE) ansible-homeassistant/configure.yml
+
 gardener:
 	ansible-playbook -i scripts/terraform_inventory.py ansible-gardener/configure.yml
 
-all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns
+all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns homeassistant gardener
 
 # --- Ops ---
 

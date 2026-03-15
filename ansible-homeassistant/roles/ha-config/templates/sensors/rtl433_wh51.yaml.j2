@@ -1,0 +1,44 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+# WH51 soil moisture sensors — managed by Ansible
+# Each sensor ID in ha_wh51_sensors generates three MQTT entities:
+#   - Moisture (%)
+#   - Battery voltage (mV)
+#   - Battery level (%, derived from mV)
+#
+# Source: ansible-homeassistant/roles/ha-config/templates/sensors/rtl433_wh51.yaml.j2
+# To add a new sensor: append its ID to ha_wh51_sensors in defaults or group_vars.
+[# for sensor in ha_wh51_sensors #]
+
+  # WH51 [% sensor.id %][# if sensor.name is defined #] ([% sensor.name %])[# endif #]
+
+  - platform: mqtt
+    name: "WH51 [% sensor.id %] Moisture"
+    state_topic: "[% ha_wh51_mqtt_topic_prefix %]/[% sensor.id %]"
+    value_template: "{{ value_json.moisture }}"
+    unit_of_measurement: "%"
+    json_attributes_topic: "[% ha_wh51_mqtt_topic_prefix %]/[% sensor.id %]"
+    qos: 0
+    unique_id: "wh51_[% sensor.id %]_moisture"
+
+  - platform: mqtt
+    name: "WH51 [% sensor.id %] Battery mV"
+    state_topic: "[% ha_wh51_mqtt_topic_prefix %]/[% sensor.id %]"
+    value_template: "{{ value_json.battery_mV }}"
+    unit_of_measurement: "mV"
+    qos: 0
+    unique_id: "wh51_[% sensor.id %]_battery_mv"
+
+  - platform: mqtt
+    name: "WH51 [% sensor.id %] Battery %"
+    state_topic: "[% ha_wh51_mqtt_topic_prefix %]/[% sensor.id %]"
+    value_template: >-
+      {% set mv = (value_json.battery_mV | int(0)) %}
+      {% if mv <= 0 %}
+        unavailable
+      {% else %}
+        {{ ((mv - 1200) / 300 * 100) | float | round(0) | int | min(100) | max(0) }}
+      {% endif %}
+    unit_of_measurement: "%"
+    qos: 0
+    unique_id: "wh51_[% sensor.id %]_battery_pct"
+[# endfor #]

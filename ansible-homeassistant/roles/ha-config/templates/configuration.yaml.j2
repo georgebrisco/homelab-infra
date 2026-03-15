@@ -1,0 +1,59 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[\!", comment_end_string:"\!]"
+# Home Assistant configuration — managed by Ansible
+# Do not edit on the HA host directly; changes will be overwritten.
+# Source: ansible-homeassistant/roles/ha-config/templates/configuration.yaml.j2
+
+default_config:
+
+frontend:
+  themes: \!include_dir_merge_named themes
+
+automation: \!include automations.yaml
+script: \!include scripts.yaml
+scene: \!include scenes.yaml
+sensor: \!include_dir_merge_list sensors
+
+[# if ha_light_groups | length > 0 #]
+light:
+[# for group in ha_light_groups #]
+  - platform: group
+    name: [% group.name %]
+    unique_id: [% group.unique_id %]
+    entities:
+[# for entity in group.entities #]
+      - [% entity %]
+[# endfor #]
+[# endfor #]
+[# endif #]
+
+template:
+  - sensor:
+      - name: "T9 HVAC Action"
+        unique_id: t9_hvac_action
+        state: >
+          {{ state_attr([% ha_thermostat_entity %], hvac_action) }}
+  - binary_sensor:
+      - name: "HVAC Cooling"
+        state: >
+          {{ states(sensor.t9_hvac_action) == cooling }}
+  - sensor:
+      - name: "AC Delta T"
+        unit_of_measurement: "°C"
+        state_class: measurement
+        state: >
+          {% set return_temp = states([% ha_ac_return_sensor %])|float(0) %}
+[# for sensor in ha_ac_supply_sensors #]
+          {% set supply[% loop.index %] = states([% sensor %])|float(0) %}
+[# endfor #]
+          {% set supply_mean = (([# for sensor in ha_ac_supply_sensors #]supply[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_ac_supply_sensors | length %]) %}
+          {{ (return_temp - supply_mean) | round(1) }}
+  - sensor:
+      - name: "Outdoor Temperature"
+        unit_of_measurement: "°C"
+        state_class: measurement
+        device_class: temperature
+        state: >
+[# for sensor in ha_outdoor_temp_sensors #]
+          {% set t[% loop.index %] = states([% sensor %])|float(0) %}
+[# endfor #]
+          {{ (([# for sensor in ha_outdoor_temp_sensors #]t[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_outdoor_temp_sensors | length %]) | round(1) }}

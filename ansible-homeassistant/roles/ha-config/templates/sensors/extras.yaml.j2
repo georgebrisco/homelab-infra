@@ -1,0 +1,67 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+# Extra sensors — managed by Ansible
+# Source: ansible-homeassistant/roles/ha-config/templates/sensors/extras.yaml.j2
+
+# --- Temperature rate-of-change (derivative) sensors ---
+[# for sensor in ha_temperature_sensors #]
+  - platform: derivative
+    source: [% sensor.source %]
+    name: [% sensor.name %]
+    unit_time: h
+    round: 2
+    unit: "°C/h"
+    time_window: "00:05:00"
+
+[# endfor #]
+
+# --- Tides ---
+  - platform: noaa_tides
+    station_id: [% ha_noaa_tide_station_id %]
+
+  - platform: rest
+    name: NOAA Tide Prediction
+    resource: "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=[% ha_noaa_tide_prediction_station %]&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&interval=h&format=json"
+    value_template: "{{ value_json.predictions[0].v }}"
+    unit_of_measurement: "ft"
+    scan_interval: [% ha_noaa_tide_prediction_scan_interval %]
+
+# --- HVAC runtime tracking ---
+  - platform: history_stats
+    name: AC Run Time Today
+    entity_id: sensor.t9_hvac_action
+    state: cooling
+    type: time
+    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    end: "{{ now() }}"
+
+  - platform: history_stats
+    name: AC Run Time Yesterday
+    entity_id: sensor.t9_hvac_action
+    state: cooling
+    type: time
+    start: >
+      {{ (now() - timedelta(days=1)).replace(hour=0, minute=0, second=0) }}
+    end: >
+      {{ now().replace(hour=0, minute=0, second=0) }}
+
+# --- Network monitoring ---
+[# if ha_speedtest_enabled #]
+  - platform: speedtestdotnet
+    monitored_conditions:
+      - ping
+      - download
+      - upload
+
+[# endif #]
+[# for target in ha_ping_targets #]
+  - platform: ping
+    host: [% target.host %]
+    count: [% target.count %]
+    scan_interval: 60
+    name: [% target.name %]
+
+[# endfor #]
+  - platform: command_line
+    name: Packet Loss to Google
+    command: "ping -c 10 8.8.8.8 | grep -oP '\\d+(?=% packet loss)'"
+    unit_of_measurement: "%"

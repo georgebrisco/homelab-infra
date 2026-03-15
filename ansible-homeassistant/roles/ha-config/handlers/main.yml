@@ -1,0 +1,41 @@
+---
+# Handlers for ha-config role
+# The "check and reload" pattern avoids pushing broken config to a running instance.
+
+- name: check ha config
+  uri:
+    url: "{{ ha_api_url }}/api/config/core/check_config"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ ha_api_token }}"
+    status_code: 200
+    timeout: 30
+  register: ha_config_check
+  when: ha_reload_method == "api" and ha_api_token is defined
+  listen: reload ha config
+
+- name: reload ha core
+  uri:
+    url: "{{ ha_api_url }}/api/services/homeassistant/reload_core_config"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ ha_api_token }}"
+    status_code: 200
+  when:
+    - ha_reload_method == "api"
+    - ha_api_token is defined
+    - ha_config_check is defined
+    - ha_config_check.json.result == "valid"
+  listen: reload ha config
+
+- name: reload ha automations
+  uri:
+    url: "{{ ha_api_url }}/api/services/automation/reload"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ ha_api_token }}"
+    status_code: 200
+  when:
+    - ha_reload_method == "api"
+    - ha_api_token is defined
+  listen: reload ha automations

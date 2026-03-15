@@ -1,0 +1,33 @@
+---
+# Home Assistant configuration — shared variables
+# Loaded via vars_files in ansible-homeassistant/configure.yml
+#
+# This file contains non-secret HA configuration overrides.
+# Secret values (API tokens, passwords) go in homeassistant_vault.yml.
+#
+# All defaults are documented in:
+#   ansible-homeassistant/roles/ha-config/defaults/main.yml
+
+# --- API access for config reload ---
+# Generate a long-lived access token in HA UI:
+#   Profile → Long-Lived Access Tokens → Create Token
+# Then encrypt and store in homeassistant_vault.yml:
+#   ansible-vault encrypt_string '<token>' --name 'ha_api_token' >> group_vars/all/homeassistant_vault.yml
+ha_api_url: "http://homeassistant.homelab:8123"
+# ha_api_token: set in homeassistant_vault.yml
+
+# --- WH51 sensors ---
+# Override here to add friendly names for dashboard use.
+# Just the ID is required; name is optional.
+ha_wh51_sensors:
+  - id: "0dc5f0"
+  - id: "0dc7b9"
+  - id: "0dc862"
+  - id: "0dca9c"
+  - id: "0dd020"
+  - id: "0e1a4f"
+  - id: "0e1dd1"
+  - id: "0e27b3"
+  - id: "0e2851"
+  - id: "0e28a2"
+  - id: "0e29ec"

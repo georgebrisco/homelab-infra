@@ -1,0 +1,13 @@
+---
+# Home Assistant secrets — encrypt this file with Ansible Vault
+#
+# To encrypt:
+#   ansible-vault encrypt group_vars/all/homeassistant_vault.yml
+#
+# To add a single value without decrypting the whole file:
+#   ansible-vault encrypt_string '<value>' --name 'ha_api_token'
+#
+# TODO: Generate a long-lived access token in HA UI and paste it here,
+#       then encrypt this file before committing.
+
+# ha_api_token: "<paste-your-long-lived-access-token-here>"

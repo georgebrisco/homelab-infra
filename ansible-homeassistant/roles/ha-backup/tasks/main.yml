@@ -1,0 +1,39 @@
+---
+# ha-backup — Sync HA backups to TrueNAS for off-box protection
+#
+# This runs FROM the HA host, pushing backups to TrueNAS via rsync/scp.
+# HA creates daily automatic backups in /backup/ — this role ensures they
+# are copied to TrueNAS and old copies are pruned.
+#
+# Prerequisites:
+#   - SSH key access from HA to TrueNAS (or run via manager as jump host)
+#   - Target directory must exist on TrueNAS
+
+- name: Ensure backup sync script exists
+  copy:
+    content: |
+      #!/bin/sh
+      # Sync HA backups to TrueNAS — managed by Ansible
+      # This script is idempotent: rsync only copies new/changed files.
+
+      DEST="{{ ha_backup_target_user }}@{{ ha_backup_target_host }}:{{ ha_backup_target_path }}/"
+      SRC="{{ ha_backup_source_dir }}/"
+
+      # Copy new backups
+      rsync -avz --ignore-existing "$SRC" "$DEST" 2>/dev/null
+
+      {% if ha_backup_retain_count > 0 %}
+      # Prune old backups on TrueNAS (keep newest {{ ha_backup_retain_count }})
+      ssh {{ ha_backup_target_user }}@{{ ha_backup_target_host }} \
+        "cd {{ ha_backup_target_path }} && ls -1t *.tar 2>/dev/null | tail -n +{{ ha_backup_retain_count + 1 }} | xargs -r rm --"
+      {% endif %}
+    dest: /usr/local/bin/ha-backup-sync.sh
+    mode: "0755"
+
+- name: Set up daily backup sync cron job
+  cron:
+    name: "Sync HA backups to TrueNAS"
+    minute: "30"
+    hour: "6"
+    job: "/usr/local/bin/ha-backup-sync.sh >> /var/log/ha-backup-sync.log 2>&1"
+    user: root

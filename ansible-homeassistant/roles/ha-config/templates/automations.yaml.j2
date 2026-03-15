@@ -1,0 +1,172 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+# Home Assistant automations — managed by Ansible
+# Do not edit on the HA host directly; changes will be overwritten.
+# Source: ansible-homeassistant/roles/ha-config/templates/automations.yaml.j2
+#
+# Automation IDs use the format: ansible_<descriptive_slug>
+# This distinguishes Ansible-managed automations from any created in the UI.
+
+# ============================================================================
+# HVAC — Away / Home presence management
+# ============================================================================
+#
+# Two automations replace the original four overlapping ones:
+#   1. "Departure" fires when ALL persons leave → sets away temp, closes blinds
+#   2. "Arrival" fires when ANY person arrives AND away mode is on → restores comfort
+
+- id: ansible_hvac_departure
+  alias: "HVAC: Everyone away — save energy"
+  description: >
+    When all tracked persons leave home, enable away mode:
+    raise cooling setpoint to reduce AC usage and close all blinds.
+  triggers:
+[# for person in ha_persons #]
+    - entity_id: [% person.entity_id %]
+      to: not_home
+      trigger: state
+[# endfor #]
+  conditions:
+[# for person in ha_persons #]
+    - condition: state
+      entity_id: [% person.entity_id %]
+      state: not_home
+[# endfor #]
+  actions:
+    - target:
+        entity_id: input_boolean.away_mode
+      action: input_boolean.turn_on
+    - target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: [% ha_hvac_away_temp %]
+      action: climate.set_temperature
+[# if ha_blinds | length > 0 #]
+    - target:
+        entity_id:
+[# for blind in ha_blinds #]
+          - [% blind.entity_id %]
+[# endfor #]
+      data:
+        position: 0
+      action: cover.set_cover_position
+[# endif #]
+  mode: single
+
+- id: ansible_hvac_arrival
+  alias: "HVAC: Someone home — restore comfort"
+  description: >
+    When any tracked person arrives home while away mode is active,
+    restore the comfort temperature (day) or night temperature and
+    turn off away mode.
+  triggers:
+[# for person in ha_persons #]
+    - entity_id: [% person.entity_id %]
+      to: home
+      trigger: state
+[# endfor #]
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "on"
+  actions:
+    - target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: >
+          {% if now().hour >= [% ha_hvac_night_start_hour %] or now().hour < [% ha_hvac_night_end_hour %] %}
+            [% ha_hvac_night_temp %]
+          {% else %}
+            [% ha_hvac_comfort_temp %]
+          {% endif %}
+      action: climate.set_temperature
+    - target:
+        entity_id: input_boolean.away_mode
+      action: input_boolean.turn_off
+  mode: single
+
+# ============================================================================
+# HVAC — Daily AC off schedule
+# ============================================================================
+
+- id: ansible_hvac_daily_off
+  alias: "HVAC: Daily AC off"
+  description: >
+    Turn AC off at [% ha_hvac_off_time %] every day to prevent it running
+    through the coolest part of the morning.
+  triggers:
+    - trigger: time
+      at: "[% ha_hvac_off_time %]"
+  conditions: []
+  actions:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "off"
+  mode: single
+
+# ============================================================================
+# Blinds — auto-close when room unoccupied during daytime
+# ============================================================================
+[# for blind in ha_blinds #]
+[# if blind.presence_sensor is defined #]
+
+- id: ansible_blind_autoclose_[% blind.entity_id | regex_replace([^a-z0-9], _) %]
+  alias: "Blind: Close [% blind.name %] when empty (daytime)"
+  description: >
+    Closes [% blind.name %] to 1% if the room has been empty for
+    [% blind.auto_close_delay_minutes | default(30) %] minutes during daylight.
+  triggers:
+    - entity_id: [% blind.presence_sensor %]
+      to: "off"
+      for: "00:[% %02d | format(blind.auto_close_delay_minutes | default(30)) %]:00"
+      trigger: state
+  conditions:
+    - condition: sun
+      after: sunrise
+      before: sunset
+  actions:
+    - target:
+        entity_id: [% blind.entity_id %]
+      data:
+        position: 1
+      action: cover.set_cover_position
+  mode: single
+[# endif #]
+[# endfor #]
+
+# ============================================================================
+# Grow lamp — sunrise/sunset schedule
+# ============================================================================
+[# if ha_grow_lamp is defined #]
+
+- id: ansible_grow_lamp_on
+  alias: "Grow Lamp: On at sunrise + [% ha_grow_lamp.sunrise_offset %]"
+  description: ""
+  triggers:
+    - trigger: sun
+      event: sunrise
+      offset: "[% ha_grow_lamp.sunrise_offset %]"
+  conditions: []
+  actions:
+    - type: turn_on
+      device_id: [% ha_grow_lamp.switch_device_id %]
+      entity_id: [% ha_grow_lamp.switch_entity_id %]
+      domain: switch
+  mode: single
+
+- id: ansible_grow_lamp_off
+  alias: "Grow Lamp: Off at sunset"
+  description: ""
+  triggers:
+    - trigger: sun
+      event: sunset
+      offset: 0
+  conditions: []
+  actions:
+    - type: turn_off
+      device_id: [% ha_grow_lamp.switch_device_id %]
+      entity_id: [% ha_grow_lamp.switch_entity_id %]
+      domain: switch
+  mode: single
+[# endif #]

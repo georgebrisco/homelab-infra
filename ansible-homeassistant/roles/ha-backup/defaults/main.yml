@@ -1,0 +1,13 @@
+---
+# ha-backup defaults
+
+# Where HA stores its automatic backups
+ha_backup_source_dir: /backup
+
+# TrueNAS target for off-box backup copies
+ha_backup_target_host: truenas.homelab
+ha_backup_target_path: /mnt/MainPool/local_data/backups/homeassistant
+ha_backup_target_user: root
+
+# How many backup copies to keep on TrueNAS (0 = keep all)
+ha_backup_retain_count: 14

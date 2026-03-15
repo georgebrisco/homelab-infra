@@ -1,0 +1,112 @@
+---
+# ha-config defaults — the single source of truth for HA configuration
+#
+# Override in group_vars/all/homeassistant.yml or host_vars/homeassistant.yml.
+# This file documents the full data model; production values live in group_vars.
+
+ha_config_dir: /config
+
+# --- Persons tracked for presence detection ---
+ha_persons:
+  - entity_id: person.george_brisco
+    name: George
+  - entity_id: person.roseanna_glynn
+    name: Roseanna
+
+# --- Climate / HVAC ---
+ha_thermostat_entity: climate.t9_thermostat
+ha_hvac_comfort_temp: 24
+ha_hvac_away_temp: 29
+ha_hvac_night_temp: 21
+ha_hvac_night_start_hour: 21   # 9 PM
+ha_hvac_night_end_hour: 7      # 7 AM
+ha_hvac_off_time: "05:00:00"   # daily AC-off schedule
+
+# --- Blinds ---
+ha_blinds:
+  - entity_id: cover.blind
+    name: Living Room Blind
+  - entity_id: cover.bed_blind
+    name: Bedroom Blind
+    presence_sensor: binary_sensor.presencesensor_occupancy
+    auto_close_delay_minutes: 30
+
+# --- Light groups (defined in configuration.yaml) ---
+ha_light_groups:
+  - name: Roseanna_Bathroom_Lights
+    unique_id: lightgroup.roseanna_bathroom
+    entities:
+      - light.roseanna_bath_1
+      - light.roseanna_bath_2
+      - light.roseanna_bath_3
+      - light.roseanna_bath_4
+      - light.roseanna_bath_5
+      - light.roseanna_bath_6
+
+# --- Grow lamp ---
+ha_grow_lamp:
+  switch_device_id: 5def00640fac19a0603fd9ce849cc920
+  switch_entity_id: 75ecf9fc8b20f982f748b233108a0c20
+  sunrise_offset: "03:30:00"
+
+# --- Temperature sensors for derivative tracking ---
+ha_temperature_sensors:
+  - source: sensor.bedroom_temphumid_temperature
+    name: Bedroom Temperature Rate
+  - source: sensor.livingroom_temphumid_temperature
+    name: Living Room Temperature Rate
+  - source: sensor.sparebedroom_temphumid_temperature
+    name: Spare Bedroom Temperature Rate
+
+# --- Template sensors ---
+ha_ac_supply_sensors:
+  - sensor.sparebedroomduct_temphumid_temperature
+  - sensor.bedroomduct_temphumid_temperature
+ha_ac_return_sensor: sensor.aircon_temphumid_temperature
+
+ha_outdoor_temp_sensors:
+  - sensor.balcony_temphumid_temperature
+  - sensor.balcony_temphumid2_temperature
+
+# --- NOAA tides ---
+ha_noaa_tide_station_id: "8723214"
+ha_noaa_tide_prediction_station: "8723026"
+ha_noaa_tide_prediction_scan_interval: 1800
+
+# --- Network monitoring ---
+ha_ping_targets:
+  - host: 8.8.8.8
+    name: Ping to Google
+    count: 5
+  - host: 1.1.1.1
+    name: Ping to Cloudflare
+    count: 5
+  - host: 192.168.1.254
+    name: AT&T Router Reachable
+    count: 2
+
+# --- WH51 soil moisture sensors (via rtl_433 → MQTT) ---
+# Just the device IDs — templates generate the full MQTT sensor config.
+ha_wh51_mqtt_topic_prefix: "rtl_433/gardener/devices/Fineoffset-WH51"
+ha_wh51_sensors:
+  - id: "0dc5f0"
+  - id: "0dc7b9"
+  - id: "0dc862"
+  - id: "0dca9c"
+  - id: "0dd020"
+  - id: "0e1a4f"
+  - id: "0e1dd1"
+  - id: "0e27b3"
+  - id: "0e2851"
+  - id: "0e28a2"
+  - id: "0e29ec"
+
+# --- Speedtest ---
+ha_speedtest_enabled: true
+
+# --- HA restart method after config push ---
+# Options: "api" (call check-config then reload via REST API) or "none" (manual)
+ha_reload_method: api
+ha_api_url: "http://192.168.50.11:8123"
+# ha_api_token should be set in group_vars via Ansible Vault — see README
+# ha_api_token: ""
