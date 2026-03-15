@@ -13,7 +13,7 @@
 #   Profile → Long-Lived Access Tokens → Create Token
 # Then encrypt and store in homeassistant_vault.yml:
 #   ansible-vault encrypt_string '<token>' --name 'ha_api_token' >> group_vars/all/homeassistant_vault.yml
-ha_api_url: "http://homeassistant.homelab:8123"
+ha_api_url: "http://localhost:8123"
 # ha_api_token: set in homeassistant_vault.yml
 
 # --- WH51 sensors ---

@@ -50,14 +50,15 @@ views:
       # Soil Moisture Sensors (WH51)
       # Battery % is computed in the MQTT sensor (rtl433_wh51.yaml.j2)
       # with device_class: battery for native HA coloring.
-      # Entity IDs use unique_id: wh51_<id>_battery_pct
+      # Entity IDs: HA doubles the unique_id prefix with the name slug,
+      # giving sensor.wh51_<id>_wh51_<id>_battery
       # ================================================================
       - title: Soil Sensors (WH51)
         type: grid
         cards:
 [# for sensor in ha_wh51_sensors #]
           - type: tile
-            entity: sensor.wh51_[% sensor.id %]_battery
+            entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
             name: "[% sensor.name | default('WH51 ' + sensor.id) %]"
 [# endfor #]
 

@@ -1,6 +1,6 @@
 #jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
 # WH51 soil moisture sensors — managed by Ansible
-# Each sensor ID in ha_wh51_sensors generates three MQTT entities:
+# Each sensor ID in ha_wh51_sensors generates three MQTT sensor entities:
 #   - Moisture (%)
 #   - Battery voltage (mV)
 #   - Battery level (%, derived from mV, with device_class: battery for coloring)
@@ -9,14 +9,14 @@
 #   rtl_proxy/gardener/events/WH51-<id>  →  {"moisture": 25, "battery_mV": 1500, ...}
 # These are retained messages, so HA picks them up on restart.
 #
+# Included via: mqtt: sensor: !include_dir_merge_list mqtt_sensors
 # Source: ansible-homeassistant/roles/ha-config/templates/sensors/rtl433_wh51.yaml.j2
 # To add a new sensor: append its ID to ha_wh51_sensors in defaults or group_vars.
 [# for sensor in ha_wh51_sensors #]
 
   # WH51 [% sensor.id %][# if sensor.name is defined #] ([% sensor.name %])[# endif #]
 
-  - platform: mqtt
-    name: "WH51 [% sensor.id %] Moisture"
+  - name: "WH51 [% sensor.id %] Moisture"
     state_topic: "[% ha_wh51_mqtt_topic_prefix %]/WH51-[% sensor.id %]"
     value_template: "{{ value_json.moisture }}"
     unit_of_measurement: "%"
@@ -25,8 +25,7 @@
     expire_after: 10800
     unique_id: "wh51_[% sensor.id %]_moisture"
 
-  - platform: mqtt
-    name: "WH51 [% sensor.id %] Battery mV"
+  - name: "WH51 [% sensor.id %] Battery mV"
     state_topic: "[% ha_wh51_mqtt_topic_prefix %]/WH51-[% sensor.id %]"
     value_template: "{{ value_json.battery_mV }}"
     unit_of_measurement: "mV"
@@ -35,16 +34,9 @@
     expire_after: 10800
     unique_id: "wh51_[% sensor.id %]_battery_mv"
 
-  - platform: mqtt
-    name: "WH51 [% sensor.id %] Battery"
+  - name: "WH51 [% sensor.id %] Battery"
     state_topic: "[% ha_wh51_mqtt_topic_prefix %]/WH51-[% sensor.id %]"
-    value_template: >-
-      {% set mv = (value_json.battery_mV | int(0)) %}
-      {% if mv <= 0 %}
-        unavailable
-      {% else %}
-        {{ ((mv - [% ha_wh51_battery_min_mv %]) / ([% ha_wh51_battery_max_mv %] - [% ha_wh51_battery_min_mv %]) * 100) | round(0) | int | min(100) | max(0) }}
-      {% endif %}
+    value_template: "{{ [[(((value_json.battery_mV | int(0)) - [% ha_wh51_battery_min_mv %]) / ([% ha_wh51_battery_max_mv %] - [% ha_wh51_battery_min_mv %]) * 100) | round(0) | int, 100] | min, 0] | max }}"
     unit_of_measurement: "%"
     device_class: battery
     qos: 0

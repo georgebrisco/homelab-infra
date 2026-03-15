@@ -33,6 +33,7 @@
   vars_files:
     - "{{ playbook_dir }}/../group_vars/all/mqtt.yml"
     - "{{ playbook_dir }}/../group_vars/all/homeassistant.yml"
+    - "{{ playbook_dir }}/../group_vars/all/homeassistant_vault.yml"
 
   roles:
     - role: ha-config

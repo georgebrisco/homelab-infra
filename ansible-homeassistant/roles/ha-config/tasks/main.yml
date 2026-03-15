@@ -11,6 +11,12 @@
     state: directory
     mode: "0755"
 
+- name: Ensure mqtt_sensors directory exists
+  file:
+    path: "{{ ha_config_dir }}/mqtt_sensors"
+    state: directory
+    mode: "0755"
+
 # --- Main configuration file ---
 
 - name: Deploy configuration.yaml
@@ -40,7 +46,7 @@
     backup: true
   notify: reload ha automations
 
-# --- Sensor config files ---
+# --- Sensor config files (template/derivative sensors) ---
 
 - name: Deploy sensor config — extras
   template:
@@ -50,13 +56,20 @@
     backup: true
   notify: reload ha config
 
-- name: Deploy sensor config — WH51 moisture sensors
+# --- MQTT sensor config files (mqtt: sensor: key, modern HA format) ---
+
+- name: Deploy MQTT sensor config — WH51 moisture sensors
   template:
     src: sensors/rtl433_wh51.yaml.j2
-    dest: "{{ ha_config_dir }}/sensors/rtl433_wh51.yaml"
+    dest: "{{ ha_config_dir }}/mqtt_sensors/rtl433_wh51.yaml"
     mode: "0644"
     backup: true
   notify: reload ha config
+
+- name: Remove legacy WH51 sensor file from sensors/ directory
+  file:
+    path: "{{ ha_config_dir }}/sensors/rtl433_wh51.yaml"
+    state: absent
 
 # --- Dashboards ---
 

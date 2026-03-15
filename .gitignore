@@ -16,6 +16,7 @@ secrets.auto.tfvars
 ansible-router/group_vars/all/secrets.yml
 ansible-k3s/group_vars/all/vault.yml
 manifests/portfolio/secret.yaml
+.vault_pass
 
 # OS
 .DS_Store

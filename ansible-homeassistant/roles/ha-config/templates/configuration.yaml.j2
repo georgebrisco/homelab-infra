@@ -13,6 +13,11 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 sensor: !include_dir_merge_list sensors
 
+# --- MQTT sensors (modern HA ≥2022.6 format) ---
+# WH51 soil sensors subscribe to moisture_proxy.py JSON topics.
+mqtt:
+  sensor: !include_dir_merge_list mqtt_sensors
+
 # --- YAML-mode dashboards (managed by Ansible) ---
 lovelace:
   mode: storage
