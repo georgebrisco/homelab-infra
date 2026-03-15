@@ -87,11 +87,11 @@ ha_ping_targets:
 
 # --- WH51 soil moisture sensors (via rtl_433 → MQTT) ---
 # Just the device IDs — templates generate the full MQTT sensor config.
-ha_wh51_mqtt_topic_prefix: "rtl_433/gardener/devices/Fineoffset-WH51"
+ha_wh51_mqtt_topic_prefix: "rtl_proxy/gardener/events"
 # WH51 battery voltage range for percentage calculation
-# 1.7V = fresh cell, 1.2V = effectively dead
-ha_wh51_battery_max_v: 1.7
-ha_wh51_battery_min_v: 1.2
+# 1700 mV = fresh cell, 1200 mV = effectively dead
+ha_wh51_battery_max_mv: 1700
+ha_wh51_battery_min_mv: 1200
 ha_wh51_sensors:
   - id: "0dc5f0"
   - id: "0dc7b9"

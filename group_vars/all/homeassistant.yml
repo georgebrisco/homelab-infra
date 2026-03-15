@@ -23,37 +23,26 @@ ha_api_url: "http://homeassistant.homelab:8123"
 ha_wh51_sensors:
   - id: "0dc5f0"
     name: Pineapple
-    battery_voltage_entity: sensor.soil_moisture_wh51_0dc5f0_mqtt_sensor_2
   - id: "0dc7b9"
     name: Left Large Palm
-    battery_voltage_entity: sensor.soil_moisture_wh51_0dc7b9_mqtt_sensor_2
   - id: "0dc862"
     name: Hibiscus
-    battery_voltage_entity: sensor.soil_moisture_wh51_0dc862_mqtt_sensor_2
   - id: "0dca9c"
     name: Single Cactus
-    battery_voltage_entity: sensor.soil_moisture_wh51_0dca9c_mqtt_sensor_2
   - id: "0dd020"
     name: Mixed Cactus
-    battery_voltage_entity: sensor.soil_moisture_wh51_0dd020_mqtt_sensor_2
   - id: "0e1a4f"
     name: New Monstera
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e1a4f_mqtt_sensor_2
   - id: "0e1dd1"
     name: Banana
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e1dd1_mqtt_sensor_2
   - id: "0e27b3"
     name: Stripy Pot Monstera
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e27b3_mqtt_sensor_2
   - id: "0e2851"
     name: Desert Rose
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e2851_mqtt_sensor_2
   - id: "0e28a2"
     name: Citronella
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e28a2_mqtt_sensor_2
   - id: "0e29ec"
     name: Aglaonema
-    battery_voltage_entity: sensor.soil_moisture_wh51_0e29ec_wh51_0e29ec_voltage
 
 # --- Battery dashboard — device inventory ---
 # Grouped by type so the dashboard template can render sections.

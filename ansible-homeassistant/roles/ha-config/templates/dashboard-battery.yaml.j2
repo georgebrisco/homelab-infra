@@ -48,18 +48,17 @@ views:
 
       # ================================================================
       # Soil Moisture Sensors (WH51)
-      # Uses template sensors that convert voltage → % (defined in
-      # configuration.yaml). device_class: battery gives native coloring.
+      # Battery % is computed in the MQTT sensor (rtl433_wh51.yaml.j2)
+      # with device_class: battery for native HA coloring.
+      # Entity IDs use unique_id: wh51_<id>_battery_pct
       # ================================================================
       - title: Soil Sensors (WH51)
         type: grid
         cards:
 [# for sensor in ha_wh51_sensors #]
-[# if sensor.battery_voltage_entity is defined #]
           - type: tile
-            entity: sensor.[% sensor.name | default('wh51_' + sensor.id) | lower | replace(' ', '_') %]_battery
+            entity: sensor.wh51_[% sensor.id %]_battery
             name: "[% sensor.name | default('WH51 ' + sensor.id) %]"
-[# endif #]
 [# endfor #]
 
       # ================================================================
