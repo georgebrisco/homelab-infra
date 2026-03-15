@@ -48,8 +48,8 @@ views:
 
       # ================================================================
       # Soil Moisture Sensors (WH51)
-      # Uses the voltage entity from the moisture proxy and displays
-      # mV value. WH51 batteries range ~1200mV (dead) to ~1500mV (full).
+      # Voltage range: 1.7V (full) → 1.2V (dead)
+      # Color: green >1.5V, orange 1.3–1.5V, red <1.3V
       # ================================================================
       - title: Soil Sensors (WH51)
         type: grid
@@ -59,6 +59,15 @@ views:
           - type: tile
             entity: [% sensor.battery_voltage_entity %]
             name: "[% sensor.name | default('WH51 ' + sensor.id) %]"
+            color: >
+              {% set v = states('[% sensor.battery_voltage_entity %]') | float(0) %}
+              {% if v >= 1.5 %}
+                green
+              {% elif v >= 1.3 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
 [# endif #]
 [# endfor #]
 
