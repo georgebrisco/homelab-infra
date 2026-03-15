@@ -28,6 +28,7 @@
 - name: Deploy Home Assistant configuration
   hosts: homeautomation_hosts
   gather_facts: false
+  become: true
 
   vars_files:
     - "{{ playbook_dir }}/../group_vars/all/mqtt.yml"
