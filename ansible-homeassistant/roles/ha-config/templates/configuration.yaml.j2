@@ -68,3 +68,22 @@ template:
           {% set t[% loop.index %] = states('[% sensor %]')|float(0) %}
 [# endfor #]
           {{ (([# for sensor in ha_outdoor_temp_sensors #]t[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_outdoor_temp_sensors | length %]) | round(1) }}
+[! WH51 battery voltage → percentage template sensors.
+   1.7V = 100%, 1.2V = 0%. device_class: battery gives native HA coloring. !]
+[# for sensor in ha_wh51_sensors #]
+[# if sensor.battery_voltage_entity is defined #]
+  - sensor:
+      - name: "[% sensor.name | default('WH51 ' + sensor.id) %] Battery"
+        unique_id: wh51_[% sensor.id %]_battery_level
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: >
+          {% set v = states('[% sensor.battery_voltage_entity %]') | float(0) %}
+          {% if v <= 0 or is_state('[% sensor.battery_voltage_entity %]', 'unavailable') %}
+            unavailable
+          {% else %}
+            {{ (((v - [% ha_wh51_battery_min_v %]) / ([% ha_wh51_battery_max_v %] - [% ha_wh51_battery_min_v %])) * 100) | round(0) | int | min(100) | max(0) }}
+          {% endif %}
+[# endif #]
+[# endfor #]
