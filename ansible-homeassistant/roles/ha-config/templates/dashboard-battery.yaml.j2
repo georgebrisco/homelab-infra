@@ -20,14 +20,6 @@ views:
           - type: tile
             entity: [% sensor.entity_id %]
             name: "[% sensor.name %]"
-            color: >
-              {% if states('[% sensor.entity_id %]') | int(0) > 60 %}
-                green
-              {% elif states('[% sensor.entity_id %]') | int(0) > 25 %}
-                orange
-              {% else %}
-                red
-              {% endif %}
 [# endfor #]
 
       # ================================================================
@@ -56,14 +48,18 @@ views:
 
       # ================================================================
       # Soil Moisture Sensors (WH51)
+      # Uses the voltage entity from the moisture proxy and displays
+      # mV value. WH51 batteries range ~1200mV (dead) to ~1500mV (full).
       # ================================================================
       - title: Soil Sensors (WH51)
         type: grid
         cards:
 [# for sensor in ha_wh51_sensors #]
+[# if sensor.battery_voltage_entity is defined #]
           - type: tile
-            entity: sensor.wh51_[% sensor.id %]_battery_pct
+            entity: [% sensor.battery_voltage_entity %]
             name: "[% sensor.name | default('WH51 ' + sensor.id) %]"
+[# endif #]
 [# endfor #]
 
       # ================================================================
