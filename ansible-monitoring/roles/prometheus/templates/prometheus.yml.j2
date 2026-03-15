@@ -22,3 +22,16 @@ scrape_configs:
           instance: '{{ host }}'
 {% endif %}
 {% endfor %}
+
+{% if ha_api_token is defined %}
+  # Home Assistant — /api/prometheus endpoint
+  # Token from homeassistant_vault.yml (single source of truth)
+  - job_name: homeassistant
+    scrape_interval: 60s
+    metrics_path: /api/prometheus
+    bearer_token: '{{ ha_api_token }}'
+    static_configs:
+      - targets: ['{{ hostvars["homeassistant"]["ansible_host"] | default("192.168.50.11") }}:8123']
+        labels:
+          instance: homeassistant
+{% endif %}

@@ -12,6 +12,11 @@
   hosts: monitoring_hosts
   gather_facts: true
 
+  vars_files:
+    # HA API token — used by the Prometheus scrape job for /api/prometheus.
+    # Single source of truth: the same vault file used by ansible-homeassistant.
+    - "{{ playbook_dir }}/../group_vars/all/homeassistant_vault.yml"
+
   roles:
     - role: prometheus
     - role: grafana

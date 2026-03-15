@@ -13,6 +13,21 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 sensor: !include_dir_merge_list sensors
 
+# --- Prometheus metrics endpoint ---
+# Exposes /api/prometheus for scraping by the monitoring stack.
+# Filter to numeric sensors only; exclude noisy or unnecessary domains.
+prometheus:
+  namespace: homeassistant
+  filter:
+    include_domains:
+      - sensor
+      - binary_sensor
+      - climate
+      - weather
+    exclude_entity_globs:
+      - sensor.sm_*_app_*
+      - sensor.*_geocoded_location
+
 # --- MQTT sensors (modern HA ≥2022.6 format) ---
 # WH51 soil sensors subscribe to moisture_proxy.py JSON topics.
 mqtt:
