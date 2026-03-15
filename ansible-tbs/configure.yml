@@ -1,0 +1,35 @@
+---
+# Deploy Tea Blend Studio website
+#
+# Preview and production use the same role with different git branches.
+# The post-receive hook on devbox triggers this with --limit and -e tbs_git_version.
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#
+#   # Full provision (first time):
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml
+#
+#   # Redeploy preview only (skip setup):
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml \
+#     --limit preview-site --skip-tags setup
+#
+#   # Redeploy production only (skip setup):
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml \
+#     --limit production-site --skip-tags setup -e tbs_git_version=production
+
+- name: Deploy Tea Blend Studio (preview)
+  hosts: preview-site
+  gather_facts: true
+  vars:
+    tbs_git_version: master
+  roles:
+    - role: tbs-web
+
+- name: Deploy Tea Blend Studio (production)
+  hosts: production-site
+  gather_facts: true
+  vars:
+    tbs_git_version: production
+  roles:
+    - role: tbs-web

@@ -1,0 +1,99 @@
+---
+# Deploy Tea Blend Studio — Vite + React SPA served by PM2 + serve
+
+# --- System setup (first-time only) ---
+- name: Install Node.js prerequisites
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - git
+      - build-essential
+      - nfs-common
+    state: present
+    update_cache: true
+  tags: [setup]
+
+- name: Check if Node.js is installed
+  command: node --version
+  register: node_check
+  changed_when: false
+  failed_when: false
+  tags: [setup]
+
+- name: Add NodeSource LTS repository
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+  when: node_check.rc != 0
+  tags: [setup]
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+  when: node_check.rc != 0
+  tags: [setup]
+
+- name: Install PM2 and serve globally
+  npm:
+    name: "{{ item }}"
+    global: true
+    state: present
+  loop:
+    - pm2
+    - serve
+  tags: [setup]
+
+- name: Generate SSH keypair for git access
+  openssh_keypair:
+    path: /root/.ssh/id_ed25519
+    type: ed25519
+    comment: "{{ inventory_hostname }}"
+    force: false
+  tags: [setup]
+
+- name: Register container SSH key on devbox git server
+  delegate_to: localhost
+  shell: |
+    pubkey=$(ssh -o StrictHostKeyChecking=no root@{{ ansible_host }} 'cat /root/.ssh/id_ed25519.pub')
+    ssh -o StrictHostKeyChecking=no root@192.168.50.23 \
+      "grep -qxF '$pubkey' /root/.ssh/authorized_keys || echo '$pubkey' >> /root/.ssh/authorized_keys"
+  tags: [setup]
+
+# --- Deploy (runs every time) ---
+- name: Clone or update the git repo
+  git:
+    repo: "{{ tbs_git_repo }}"
+    dest: "{{ tbs_app_dir }}"
+    force: true
+    accept_hostkey: true
+    version: "{{ tbs_git_version }}"
+
+- name: Install npm dependencies
+  community.general.npm:
+    path: "{{ tbs_app_dir }}"
+    state: present
+
+- name: Build the Vite app
+  command: npm run build
+  args:
+    chdir: "{{ tbs_app_dir }}"
+  register: build_result
+  changed_when: true
+
+- name: Start or restart app with PM2
+  shell: |
+    pm2 describe {{ tbs_app_name }} > /dev/null 2>&1 \
+      && pm2 restart {{ tbs_app_name }} \
+      || pm2 start serve --name "{{ tbs_app_name }}" -- -s dist -l {{ tbs_port }}
+  args:
+    chdir: "{{ tbs_app_dir }}"
+
+- name: Save PM2 process list
+  command: pm2 save
+
+- name: Configure PM2 to start on boot
+  shell: pm2 startup systemd -u root --hp /root
+  args:
+    creates: /etc/systemd/system/pm2-root.service
+  ignore_errors: true

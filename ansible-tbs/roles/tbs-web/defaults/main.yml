@@ -1,0 +1,6 @@
+---
+tbs_git_repo: "root@192.168.50.23:/srv/git/the-site.git"
+tbs_app_dir: /srv/website
+tbs_app_name: website
+tbs_port: 3000
+tbs_git_version: master
