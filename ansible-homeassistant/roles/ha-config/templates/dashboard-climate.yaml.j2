@@ -1,0 +1,220 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+[! Climate dashboard — managed by Ansible
+   Source: ansible-homeassistant/roles/ha-config/templates/dashboard-climate.yaml.j2
+!]
+title: Climate
+views:
+  - title: Climate
+    path: climate
+    type: sections
+    sections:
+      # ── Outside & Weather ──────────────────────────────────────
+      - type: grid
+        title: Outside & Weather
+        column_span: 2
+        cards:
+          - type: weather-forecast
+            entity: weather.forecast_home
+            show_forecast: true
+            forecast_type: daily
+
+          - type: tile
+            entity: sensor.outdoor_temperature
+            name: "Outdoor Average"
+            icon: mdi:thermometer
+            color: amber
+
+          - type: tile
+            entity: [% ha_outdoor_temp_sensors[0] %]
+            name: "Balcony 1"
+            icon: mdi:sun-thermometer
+            color: amber
+
+          - type: tile
+            entity: [% ha_outdoor_temp_sensors[1] %]
+            name: "Balcony 2"
+            icon: mdi:sun-thermometer
+            color: amber
+
+      # ── Room Temperatures ──────────────────────────────────────
+      - type: grid
+        title: Room Temperatures
+        column_span: 2
+        cards:
+          - type: tile
+            entity: climate.t9_thermostat
+            features:
+              - type: climate-hvac-modes
+                hvac_modes:
+                  - "off"
+                  - cool
+                  - heat
+                  - auto
+
+          - type: tile
+            entity: sensor.livingroom_temphumid_temperature
+            name: "Living Room"
+            icon: mdi:sofa
+            color: cyan
+
+          - type: tile
+            entity: sensor.bedroom_temphumid_temperature
+            name: "Bedroom"
+            icon: mdi:bed
+            color: cyan
+
+          - type: tile
+            entity: sensor.sparebedroom_temphumid_temperature
+            name: "Spare Bedroom"
+            icon: mdi:bed-outline
+            color: cyan
+
+          - type: tile
+            entity: sensor.master_bedroom_air_sensor_01_temperature_sensor
+            name: "Master (Air Sensor)"
+            icon: mdi:air-filter
+            color: cyan
+
+      # ── HVAC System ────────────────────────────────────────────
+      - type: grid
+        title: HVAC System
+        column_span: 2
+        cards:
+          - type: tile
+            entity: sensor.t9_hvac_action
+            name: "HVAC Status"
+            icon: mdi:hvac
+            color: teal
+
+          - type: tile
+            entity: [% ha_ac_return_sensor %]
+            name: "Return Air"
+            icon: mdi:arrow-right-bold
+            color: red
+
+[# for sensor in ha_ac_supply_sensors #]
+          - type: tile
+            entity: [% sensor %]
+            name: "Supply Duct [% loop.index %]"
+            icon: mdi:arrow-left-bold
+            color: blue
+
+[# endfor #]
+          - type: tile
+            entity: sensor.ac_delta_t
+            name: "Delta T (return − supply)"
+            icon: mdi:delta
+            color: deep-purple
+
+          - type: tile
+            entity: sensor.ac_run_time_today
+            name: "Run Time Today"
+            icon: mdi:timer-outline
+            color: teal
+
+          - type: tile
+            entity: sensor.ac_run_time_yesterday
+            name: "Run Time Yesterday"
+            icon: mdi:timer-check-outline
+            color: grey
+
+      # ── Humidity ───────────────────────────────────────────────
+      - type: grid
+        title: Humidity
+        column_span: 2
+        cards:
+          - type: tile
+            entity: sensor.aircon_temphumid_humidity
+            name: "Return Air"
+            icon: mdi:water-percent
+            color: indigo
+
+          - type: tile
+            entity: sensor.livingroom_temphumid_humidity
+            name: "Living Room"
+            icon: mdi:water-percent
+            color: indigo
+
+          - type: tile
+            entity: sensor.bedroom_temphumid_humidity
+            name: "Bedroom"
+            icon: mdi:water-percent
+            color: indigo
+
+          - type: tile
+            entity: sensor.balcony_temphumid_humidity
+            name: "Outside"
+            icon: mdi:water-percent
+            color: indigo
+
+      # ── 24 h Temperature History ───────────────────────────────
+      - type: grid
+        title: "24 h Temperature History"
+        column_span: 4
+        cards:
+          - type: history-graph
+            title: "Room Temperatures"
+            hours_to_show: 24
+            entities:
+              - entity: sensor.livingroom_temphumid_temperature
+                name: "Living Room"
+              - entity: sensor.bedroom_temphumid_temperature
+                name: "Bedroom"
+              - entity: sensor.sparebedroom_temphumid_temperature
+                name: "Spare Bedroom"
+              - entity: sensor.master_bedroom_air_sensor_01_temperature_sensor
+                name: "Master (Air Sensor)"
+              - entity: climate.t9_thermostat
+                name: "Thermostat Setpoint"
+
+          - type: history-graph
+            title: "Outside (Balcony Sensors)"
+            hours_to_show: 24
+            entities:
+              - entity: [% ha_outdoor_temp_sensors[0] %]
+                name: "Balcony 1"
+              - entity: [% ha_outdoor_temp_sensors[1] %]
+                name: "Balcony 2"
+              - entity: sensor.outdoor_temperature
+                name: "Average"
+              - entity: weather.forecast_home
+                name: "Weather"
+
+          - type: history-graph
+            title: "HVAC: Return Air vs Supply Ducts"
+            hours_to_show: 24
+            entities:
+              - entity: [% ha_ac_return_sensor %]
+                name: "Return Air"
+[# for sensor in ha_ac_supply_sensors #]
+              - entity: [% sensor %]
+                name: "Supply Duct [% loop.index %]"
+[# endfor #]
+              - entity: sensor.ac_delta_t
+                name: "Delta T"
+
+      # ── 24 h Humidity History ──────────────────────────────────
+      - type: grid
+        title: "24 h Humidity History"
+        column_span: 4
+        cards:
+          - type: history-graph
+            title: "Indoor Humidity"
+            hours_to_show: 24
+            entities:
+              - entity: sensor.aircon_temphumid_humidity
+                name: "Return Air"
+              - entity: sensor.livingroom_temphumid_humidity
+                name: "Living Room"
+              - entity: sensor.bedroom_temphumid_humidity
+                name: "Bedroom"
+              - entity: sensor.t9_thermostat
+                name: "Thermostat"
+                attribute: current_humidity
+
+          - type: history-graph
+            title: "HVAC Activity"
+            hours_to_show: 24
+            entities:
+              - entity: binary_sensor.hvac_cooling
+                name: "Cooling Active"

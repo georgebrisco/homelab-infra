@@ -87,6 +87,14 @@
     backup: true
   notify: reload ha config
 
+- name: Deploy climate dashboard
+  template:
+    src: dashboard-climate.yaml.j2
+    dest: "{{ ha_config_dir }}/dashboards/climate.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
+
 # --- Empty placeholder files (managed in UI, preserved here) ---
 # scripts.yaml and scenes.yaml are primarily edited in the HA UI.
 # We only create them if they don't exist, to avoid clobbering UI state.
