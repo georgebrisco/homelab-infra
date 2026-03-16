@@ -6,53 +6,152 @@ title: Plant Moisture
 views:
   - title: Plant Moisture
     path: moisture
-    type: sections
-    sections:
-      # ── Sensor Health ──────────────────────────────────────────
-      - type: grid
-        title: "Sensor Health"
-        column_span: 4
+    type: panel
+    cards:
+      - type: vertical-stack
         cards:
-          - type: markdown
-            content: |
-              | Plant | Moisture | Battery | Last Seen |
-              |:------|:--------:|:-------:|:----------|
+          # ── Tile sections: Moisture | Battery | Data Delay ────
+          - type: horizontal-stack
+            cards:
+              # ── Current Moisture ──────────────────────────────
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    content: "## Current Moisture"
 [# for sensor in ha_wh51_sensors #]
-              | **[% sensor.name | default(sensor.id) %]** | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture') }}% | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery') }}% | {% if states('sensor.wh51_[% sensor.id %]_last_seen') not in ['unknown', 'unavailable'] %}{{ relative_time(states.sensor.wh51_[% sensor.id %]_last_seen.last_updated) }} ago{% else %}**No data**{% endif %} |
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                        above: 18
+                        below: 41
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:water-percent
+                      color: green
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                        above: 9
+                        below: 19
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:water-percent
+                      color: amber
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                        below: 10
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:water-percent
+                      color: red
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                        above: 40
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:water-percent
+                      color: red
 [# endfor #]
-
-      # ── Current Readings ───────────────────────────────────────
-      - type: grid
-        title: "Current Moisture"
-        column_span: 2
-        cards:
+              # ── Battery ───────────────────────────────────────
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    content: "## Battery"
 [# for sensor in ha_wh51_sensors #]
-          - type: tile
-            entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
-            name: "[% sensor.name | default(sensor.id) %]"
-            icon: mdi:water-percent
-            color: green
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                        above: 59
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:battery
+                      color: green
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                        above: 19
+                        below: 60
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:battery-50
+                      color: amber
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                        below: 20
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:battery-alert
+                      color: red
 [# endfor #]
-
-      # ── Battery Status ─────────────────────────────────────────
-      - type: grid
-        title: "Battery"
-        column_span: 2
-        cards:
+              # ── Data Delay ────────────────────────────────────
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    content: "## Data Delay"
 [# for sensor in ha_wh51_sensors #]
-          - type: tile
-            entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
-            name: "[% sensor.name | default(sensor.id) %]"
-            color: amber
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_data_delay
+                        below: 300
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_data_delay
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:clock-check-outline
+                      color: green
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_data_delay
+                        above: 299
+                        below: 1801
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_data_delay
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:clock-alert-outline
+                      color: amber
+                  - type: conditional
+                    conditions:
+                      - condition: numeric_state
+                        entity: sensor.wh51_[% sensor.id %]_data_delay
+                        above: 1800
+                    card:
+                      type: tile
+                      entity: sensor.wh51_[% sensor.id %]_data_delay
+                      name: "[% sensor.name | default(sensor.id) %]"
+                      icon: mdi:clock-remove-outline
+                      color: red
 [# endfor #]
-
-      # ── 7 Day Moisture History ─────────────────────────────────
+          # ── 7 Day Moisture History (full width) ───────────────
 [# for sensor in ha_wh51_sensors #]
-      - type: grid
-        title: "[% sensor.name | default(sensor.id) %]"
-        column_span: 2
-        cards:
           - type: history-graph
+            title: "[% sensor.name | default(sensor.id) %]"
             hours_to_show: 168
             entities:
               - entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture

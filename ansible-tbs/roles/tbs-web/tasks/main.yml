@@ -81,6 +81,17 @@
   register: build_result
   changed_when: true
 
+- name: Generate version.json with git commit info
+  shell: |
+    cat > {{ tbs_app_dir }}/dist/version.json <<EOF
+    {
+      "commit": "$(git -C {{ tbs_app_dir }} rev-parse --short HEAD)",
+      "commit_full": "$(git -C {{ tbs_app_dir }} rev-parse HEAD)",
+      "branch": "{{ tbs_git_version }}",
+      "built": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    }
+    EOF
+
 - name: Start or restart app with PM2
   shell: |
     pm2 describe {{ tbs_app_name }} > /dev/null 2>&1 \
