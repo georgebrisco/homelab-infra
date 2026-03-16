@@ -140,6 +140,33 @@ template:
         state_class: total_increasing
         state: >
           {{ states('sensor.heating_run_time_today') | float(0) }}
+  # --- HVAC schedule helpers ---
+  - sensor:
+      - name: "Nearest Person Distance"
+        unique_id: nearest_person_distance
+        unit_of_measurement: "km"
+        icon: mdi:map-marker-distance
+        state: >
+          {% set ns = namespace(min_dist=9999) %}
+[# for person in ha_persons #]
+          {% set d = distance('[% person.entity_id %]') %}
+          {% if d is not none and d | float(9999) < ns.min_dist %}
+            {% set ns.min_dist = d | float %}
+          {% endif %}
+[# endfor #]
+          {{ ns.min_dist | round(1) if ns.min_dist < 9999 else 'unknown' }}
+      - name: "HVAC Target Mode"
+        unique_id: hvac_target_mode
+        icon: mdi:hvac
+        state: >
+          {% set outdoor = states('sensor.outdoor_temperature') | float(25) %}
+          {% if outdoor > [% ha_hvac_outdoor_cool_threshold %] %}
+            cool
+          {% elif outdoor < [% ha_hvac_outdoor_heat_threshold %] %}
+            heat
+          {% else %}
+            heat_cool
+          {% endif %}
   - binary_sensor:
       - name: "Internet Up"
         unique_id: internet_up

@@ -7,18 +7,152 @@
 # This distinguishes Ansible-managed automations from any created in the UI.
 
 # ============================================================================
-# HVAC — Away / Home presence management
+# HVAC — Scheduled comfort profiles
 # ============================================================================
 #
-# Two automations replace the original four overlapping ones:
-#   1. "Departure" fires when ALL persons leave → sets away temp, closes blinds
-#   2. "Arrival" fires when ANY person arrives AND away mode is on → restores comfort
+# Daily cycle (cooling season — the common case in Miami):
+#
+#   21:00  Sleep cooling    → cool to 20 °C
+#   05:00  Morning drift    → AC off, let temp rise naturally toward 22-23 °C
+#          Auto-resume      → if indoor > 25 °C before 07:00, resume at 23.5 °C
+#   07:00  Day comfort      → cool to 23.5 °C (if someone is home)
+#
+# Presence overlay:
+#   Everyone away (near)    → 26 °C      (< 10 km from home)
+#   Everyone away (far)     → 28 °C      (≥ 10 km from home)
+#   Someone arrives         → restore schedule-appropriate temp
+#
+# Seasonal mode: outdoor temp drives cool / heat / heat_cool selection
+#   via sensor.hvac_target_mode (template sensor in configuration.yaml).
 
+# ── Sleep cooling ─────────────────────────────────────────────────
+- id: ansible_hvac_sleep
+  alias: "HVAC: Sleep cooling"
+  description: >
+    At [% ha_hvac_sleep_start %] set the thermostat to the sleep temperature.
+    Skipped when everyone is away (away mode handles its own setpoint).
+  triggers:
+    - trigger: time
+      at: "[% ha_hvac_sleep_start %]"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "off"
+  actions:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
+    - action: climate.set_temperature
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: [% ha_hvac_sleep_temp %]
+  mode: single
+
+# ── Morning AC off (let temp drift up) ───────────────────────────
+- id: ansible_hvac_morning_off
+  alias: "HVAC: Morning AC off"
+  description: >
+    At [% ha_hvac_morning_off %] turn the AC off. The house will drift
+    from ~20 °C toward 22-23 °C by wake-up time without using the heater.
+    If it gets too warm, ansible_hvac_morning_resume will kick in.
+  triggers:
+    - trigger: time
+      at: "[% ha_hvac_morning_off %]"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "off"
+  actions:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "off"
+  mode: single
+
+# ── Morning auto-resume (too warm during drift) ──────────────────
+- id: ansible_hvac_morning_resume
+  alias: "HVAC: Morning auto-resume if too warm"
+  description: >
+    Between [% ha_hvac_morning_off %] and [% ha_hvac_day_start %], if
+    the indoor temperature exceeds [% ha_hvac_resume_temp %] °C, resume
+    cooling at the daytime comfort temperature. This catches unusually
+    hot mornings where the drift would overshoot.
+  triggers:
+    - trigger: numeric_state
+      entity_id: [% ha_thermostat_entity %]
+      attribute: current_temperature
+      above: [% ha_hvac_resume_temp %]
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "off"
+    - condition: time
+      after: "[% ha_hvac_morning_off %]"
+      before: "[% ha_hvac_day_start %]"
+    - condition: state
+      entity_id: [% ha_thermostat_entity %]
+      state: "off"
+  actions:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
+    - action: climate.set_temperature
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: [% ha_hvac_day_temp %]
+  mode: single
+
+# ── Day comfort ───────────────────────────────────────────────────
+- id: ansible_hvac_day_start
+  alias: "HVAC: Day comfort"
+  description: >
+    At [% ha_hvac_day_start %] set the daytime comfort temperature
+    if someone is home. If everyone is away, the departure automation
+    already controls the setpoint.
+  triggers:
+    - trigger: time
+      at: "[% ha_hvac_day_start %]"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "off"
+  actions:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
+    - action: climate.set_temperature
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: >
+          {% set mode = states('sensor.hvac_target_mode') %}
+          {% if mode == 'heat' %}
+            [% ha_hvac_heat_day_temp %]
+          {% else %}
+            [% ha_hvac_day_temp %]
+          {% endif %}
+  mode: single
+
+# ============================================================================
+# HVAC — Presence-aware away / home management
+# ============================================================================
+
+# ── Everyone away — distance-aware setpoint ───────────────────────
 - id: ansible_hvac_departure
   alias: "HVAC: Everyone away — save energy"
   description: >
-    When all tracked persons leave home, enable away mode:
-    raise cooling setpoint to reduce AC usage and close all blinds.
+    When all tracked persons leave home, enable away mode and set a
+    distance-aware temperature: nearer = lower setpoint (faster recovery
+    on return), farther = higher setpoint (more savings).
   triggers:
 [# for person in ha_persons #]
     - entity_id: [% person.entity_id %]
@@ -32,32 +166,75 @@
       state: not_home
 [# endfor #]
   actions:
-    - target:
+    - action: input_boolean.turn_on
+      target:
         entity_id: input_boolean.away_mode
-      action: input_boolean.turn_on
-    - target:
+    - action: climate.set_hvac_mode
+      target:
         entity_id: [% ha_thermostat_entity %]
       data:
-        temperature: [% ha_hvac_away_temp %]
-      action: climate.set_temperature
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
+    - action: climate.set_temperature
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: >
+          {% set dist = states('sensor.nearest_person_distance') | float(999) %}
+          {% if dist < [% ha_hvac_away_distance_km %] %}
+            [% ha_hvac_away_near_temp %]
+          {% else %}
+            [% ha_hvac_away_far_temp %]
+          {% endif %}
 [# if ha_blinds | length > 0 #]
-    - target:
+    - action: cover.set_cover_position
+      target:
         entity_id:
 [# for blind in ha_blinds #]
           - [% blind.entity_id %]
 [# endfor #]
       data:
         position: 0
-      action: cover.set_cover_position
 [# endif #]
   mode: single
 
+# ── Distance change while away — adjust setpoint ─────────────────
+- id: ansible_hvac_away_distance_update
+  alias: "HVAC: Adjust away temp as distance changes"
+  description: >
+    While everyone is away, re-evaluate the setpoint when the nearest
+    person's distance crosses the near/far boundary. This way, if you
+    start heading home the AC begins pre-cooling sooner.
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.nearest_person_distance
+      below: [% ha_hvac_away_distance_km %]
+    - trigger: numeric_state
+      entity_id: sensor.nearest_person_distance
+      above: [% ha_hvac_away_distance_km %]
+  conditions:
+    - condition: state
+      entity_id: input_boolean.away_mode
+      state: "on"
+  actions:
+    - action: climate.set_temperature
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        temperature: >
+          {% set dist = states('sensor.nearest_person_distance') | float(999) %}
+          {% if dist < [% ha_hvac_away_distance_km %] %}
+            [% ha_hvac_away_near_temp %]
+          {% else %}
+            [% ha_hvac_away_far_temp %]
+          {% endif %}
+  mode: single
+
+# ── Someone arrives home — restore comfort ────────────────────────
 - id: ansible_hvac_arrival
   alias: "HVAC: Someone home — restore comfort"
   description: >
     When any tracked person arrives home while away mode is active,
-    restore the comfort temperature (day) or night temperature and
-    turn off away mode.
+    restore the schedule-appropriate temperature and turn off away mode.
   triggers:
 [# for person in ha_persons #]
     - entity_id: [% person.entity_id %]
@@ -69,40 +246,66 @@
       entity_id: input_boolean.away_mode
       state: "on"
   actions:
-    - target:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.away_mode
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: [% ha_thermostat_entity %]
+      data:
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
+    - action: climate.set_temperature
+      target:
         entity_id: [% ha_thermostat_entity %]
       data:
         temperature: >
-          {% if now().hour >= [% ha_hvac_night_start_hour %] or now().hour < [% ha_hvac_night_end_hour %] %}
-            [% ha_hvac_night_temp %]
+          {% set h = now().hour %}
+          {% set mode = states('sensor.hvac_target_mode') %}
+          {% if h >= 21 or h < 5 %}
+            [% ha_hvac_sleep_temp %]
+          {% elif h < 7 %}
+            [% ha_hvac_day_temp %]
+          {% elif mode == 'heat' %}
+            [% ha_hvac_heat_day_temp %]
           {% else %}
-            [% ha_hvac_comfort_temp %]
+            [% ha_hvac_day_temp %]
           {% endif %}
-      action: climate.set_temperature
-    - target:
-        entity_id: input_boolean.away_mode
-      action: input_boolean.turn_off
   mode: single
 
 # ============================================================================
-# HVAC — Daily AC off schedule
+# HVAC — Seasonal mode switching
 # ============================================================================
 
-- id: ansible_hvac_daily_off
-  alias: "HVAC: Daily AC off"
+- id: ansible_hvac_season_switch
+  alias: "HVAC: Seasonal mode switch"
   description: >
-    Turn AC off at [% ha_hvac_off_time %] every day to prevent it running
-    through the coolest part of the morning.
+    When the outdoor temperature crosses the cool/heat thresholds, switch
+    the thermostat to the appropriate mode. Uses a 3 °C deadband
+    (cool above [% ha_hvac_outdoor_cool_threshold %] °C,
+    heat below [% ha_hvac_outdoor_heat_threshold %] °C) to avoid flapping.
+    Waits 30 minutes after crossing to filter transient readings.
   triggers:
-    - trigger: time
-      at: "[% ha_hvac_off_time %]"
-  conditions: []
+    - trigger: numeric_state
+      entity_id: sensor.outdoor_temperature
+      above: [% ha_hvac_outdoor_cool_threshold %]
+      for: "00:30:00"
+    - trigger: numeric_state
+      entity_id: sensor.outdoor_temperature
+      below: [% ha_hvac_outdoor_heat_threshold %]
+      for: "00:30:00"
+  conditions:
+    # Only switch if the thermostat is actually running (not in the off window)
+    - condition: not
+      conditions:
+        - condition: state
+          entity_id: [% ha_thermostat_entity %]
+          state: "off"
   actions:
     - action: climate.set_hvac_mode
       target:
         entity_id: [% ha_thermostat_entity %]
       data:
-        hvac_mode: "off"
+        hvac_mode: "{{ states('sensor.hvac_target_mode') }}"
   mode: single
 
 # ============================================================================

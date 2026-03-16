@@ -15,12 +15,39 @@ ha_persons:
 
 # --- Climate / HVAC ---
 ha_thermostat_entity: climate.t9_thermostat
-ha_hvac_comfort_temp: 24
-ha_hvac_away_temp: 29
-ha_hvac_night_temp: 21
-ha_hvac_night_start_hour: 21   # 9 PM
-ha_hvac_night_end_hour: 7      # 7 AM
-ha_hvac_off_time: "05:00:00"   # daily AC-off schedule
+
+# Schedule temperatures (°C)
+ha_hvac_sleep_temp: 20           # Night-time cooling target
+ha_hvac_day_temp: 23.5           # Daytime comfort when home
+ha_hvac_away_near_temp: 26       # Away but nearby (< ha_hvac_away_distance_km)
+ha_hvac_away_far_temp: 28        # Away and far (≥ ha_hvac_away_distance_km)
+ha_hvac_resume_temp: 25          # Auto-resume cooling if indoor temp exceeds this
+                                 # during the morning drift window (AC-off → day-start)
+
+# Schedule times
+ha_hvac_sleep_start: "21:00:00"  # 9 PM — begin night cooling
+ha_hvac_morning_off: "05:00:00"  # 5 AM — AC off, let temp drift up naturally
+ha_hvac_day_start: "07:00:00"    # 7 AM — day schedule begins
+
+# Presence / distance
+ha_hvac_away_distance_km: 10     # Near vs far boundary (km from home)
+
+# Seasonal mode switching (based on outdoor temperature)
+#   outdoor > cool_threshold  →  cool mode
+#   outdoor < heat_threshold  →  heat mode
+#   between the two           →  heat_cool (let thermostat decide)
+ha_hvac_outdoor_cool_threshold: 18
+ha_hvac_outdoor_heat_threshold: 15
+ha_hvac_heat_day_temp: 22        # Heating setpoint during the day (rare in Miami)
+# No heating at night — AC is simply off and temp drifts naturally.
+
+# Legacy aliases (kept for backward compat during transition)
+ha_hvac_comfort_temp: "{{ ha_hvac_day_temp }}"
+ha_hvac_away_temp: "{{ ha_hvac_away_far_temp }}"
+ha_hvac_night_temp: "{{ ha_hvac_sleep_temp }}"
+ha_hvac_night_start_hour: 21
+ha_hvac_night_end_hour: 7
+ha_hvac_off_time: "{{ ha_hvac_morning_off }}"
 
 # --- Blinds ---
 ha_blinds:
