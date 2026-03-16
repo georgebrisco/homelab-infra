@@ -55,6 +55,12 @@ lovelace:
       icon: mdi:web
       show_in_sidebar: true
       filename: dashboards/internet.yaml
+    dashboard-moisture:
+      mode: yaml
+      title: Plant Moisture
+      icon: mdi:flower
+      show_in_sidebar: true
+      filename: dashboards/moisture.yaml
 
 [# if ha_light_groups | length > 0 #]
 light:
@@ -215,6 +221,21 @@ template:
           {% else %}
             100
           {% endif %}
+# --- WH51 "last seen" sensors (MQTT trigger-based) ---
+# Each sensor records when we last received an MQTT message from that WH51.
+# This lets the dashboard detect silent SDR/gardener failures — if the
+# timestamp is stale (e.g. > 1 hour), something is wrong.
+[# for sensor in ha_wh51_sensors #]
+  - trigger:
+      - trigger: mqtt
+        topic: "[% ha_wh51_mqtt_topic_prefix %]/WH51-[% sensor.id %]"
+    sensor:
+      - name: "WH51 [% sensor.id %] Last Seen"
+        unique_id: wh51_[% sensor.id %]_last_seen
+        device_class: timestamp
+        state: "{{ now().isoformat() }}"
+[# endfor #]
+
 # --- command_line sensors (modern HA ≥2023.8 format) ---
 # The "sensor: platform: command_line" format is deprecated;
 # these must be under the top-level command_line: key.

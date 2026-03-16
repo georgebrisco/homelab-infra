@@ -189,7 +189,7 @@ ha_jitter_host: 8.8.8.8
 ha_jitter_count: 10
 
 # --- WH51 soil moisture sensors (via rtl_433 → MQTT) ---
-# Just the device IDs — templates generate the full MQTT sensor config.
+# Device IDs + plant names — templates generate MQTT sensor config + dashboard.
 ha_wh51_mqtt_topic_prefix: "rtl_proxy/gardener/events"
 # WH51 battery voltage range for percentage calculation
 # 1700 mV = fresh cell, 1200 mV = effectively dead
@@ -197,16 +197,39 @@ ha_wh51_battery_max_mv: 1700
 ha_wh51_battery_min_mv: 1200
 ha_wh51_sensors:
   - id: "0dc5f0"
+    name: Pineapple
   - id: "0dc7b9"
+    name: Left Large Palm
   - id: "0dc862"
+    name: Hibiscus
   - id: "0dca9c"
+    name: Single Cactus
   - id: "0dd020"
+    name: Mixed Cactus
+  - id: "0e184b"
+    name: Large Mixed Tradescantia
+    # Auto-discovered by MQTT — entity IDs don't match Ansible naming
+    moisture_entity: sensor.soil_moisture_wh51_0e184b_mqtt_sensor
+    battery_entity: sensor.soil_moisture_wh51_0e184b_mqtt_sensor_3
   - id: "0e1a4f"
+    name: New Monstera
   - id: "0e1dd1"
+    name: Banana
   - id: "0e27b3"
+    name: Stripy Pot Monstera
   - id: "0e2851"
+    name: Desert Rose
   - id: "0e28a2"
+    name: Citronella
   - id: "0e29ec"
+    name: Aglaonema
+  - id: "0ee085"
+    name: Coffee Plant
+    # Auto-discovered by MQTT — entity IDs don't match Ansible naming
+    moisture_entity: sensor.soil_moisture_wh51_0ee085_wh51_0ee085_moisture
+    battery_entity: sensor.soil_moisture_wh51_0ee085_wh51_0ee085_battery_ok
+  - id: "0effd0"
+    name: Unknown Plant
 
 # --- HA restart method after config push ---
 # Options: "api" (call check-config then reload via REST API) or "none" (manual)
