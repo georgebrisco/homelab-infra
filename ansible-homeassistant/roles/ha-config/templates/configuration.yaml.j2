@@ -49,6 +49,12 @@ lovelace:
       icon: mdi:thermometer
       show_in_sidebar: true
       filename: dashboards/climate.yaml
+    dashboard-internet:
+      mode: yaml
+      title: Internet
+      icon: mdi:web
+      show_in_sidebar: true
+      filename: dashboards/internet.yaml
 
 [# if ha_light_groups | length > 0 #]
 light:
@@ -94,7 +100,58 @@ template:
           {% set t[% loop.index %] = states('[% sensor %]')|float(0) %}
 [# endfor #]
           {{ (([# for sensor in ha_outdoor_temp_sensors #]t[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_outdoor_temp_sensors | length %]) | round(1) }}
-[! WH51 battery percentage is now computed directly in the MQTT sensor
-   (sensors/rtl433_wh51.yaml.j2) with device_class: battery for native coloring.
-   No template sensors needed here — the MQTT sensor subscribes to the
-   moisture_proxy topic and calculates mV → % inline. !]
+  - binary_sensor:
+      - name: "Internet Up"
+        unique_id: internet_up
+        device_class: connectivity
+        state: >
+          {{ states('sensor.ping_google_us') | float(0) > 0
+             or states('sensor.ping_cloudflare') | float(0) > 0 }}
+  - sensor:
+      - name: "Internet Uptime Today"
+        unique_id: internet_uptime_today
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:chart-line
+        state: >
+          {% set up   = state_attr('sensor.internet_up_today_raw', 'value') | float(0) %}
+          {% set down = state_attr('sensor.internet_down_today_raw', 'value') | float(0) %}
+          {% if (up + down) > 0 %}
+            {{ ((up / (up + down)) * 100) | round(2) }}
+          {% else %}
+            100
+          {% endif %}
+  - sensor:
+      - name: "Internet Uptime 7d"
+        unique_id: internet_uptime_7d
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:chart-line
+        state: >
+          {% set up   = state_attr('sensor.internet_up_7d_raw', 'value') | float(0) %}
+          {% set down = state_attr('sensor.internet_down_7d_raw', 'value') | float(0) %}
+          {% if (up + down) > 0 %}
+            {{ ((up / (up + down)) * 100) | round(2) }}
+          {% else %}
+            100
+          {% endif %}
+# --- command_line sensors (modern HA ≥2023.8 format) ---
+# The "sensor: platform: command_line" format is deprecated;
+# these must be under the top-level command_line: key.
+command_line:
+[# for mon in ha_ping_monitors #]
+  - sensor:
+      name: "[% mon.name %]"
+      unique_id: "[% mon.slug %]"
+      command: "ping -c [% ha_ping_count %] -W 5 [% mon.host %] 2>/dev/null | tail -1 | awk -F '/' '{printf \"%.1f\", $5}' || echo ''"
+      unit_of_measurement: "ms"
+      value_template: "{{ value | float(0) }}"
+      scan_interval: [% ha_ping_scan_interval %]
+[# endfor #]
+  - sensor:
+      name: "Packet Loss to Google"
+      unique_id: packet_loss_google
+      command: "ping -c 10 -W 5 8.8.8.8 2>/dev/null | grep -oP '\\d+(?=% packet loss)' || echo '100'"
+      unit_of_measurement: "%"
+      value_template: "{{ value | int(100) }}"
+      scan_interval: 120

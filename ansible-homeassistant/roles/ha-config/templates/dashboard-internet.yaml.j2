@@ -1,0 +1,171 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+[! Internet dashboard — managed by Ansible
+   Source: ansible-homeassistant/roles/ha-config/templates/dashboard-internet.yaml.j2
+!]
+title: Internet
+views:
+  - title: Internet
+    path: internet
+    type: sections
+    sections:
+      # ── Status at a Glance ────────────────────────────────────
+      - type: grid
+        title: ""
+        column_span: 4
+        cards:
+          - type: markdown
+            content: >
+              # {% if is_state('binary_sensor.internet_up', 'on') %}🟢 INTERNET UP{% else %}🔴 INTERNET DOWN{% endif %}
+
+          - type: tile
+            entity: sensor.internet_uptime_today
+            name: "Uptime Today"
+            icon: mdi:percent-circle-outline
+            color: green
+
+          - type: tile
+            entity: sensor.internet_uptime_7d
+            name: "Uptime 7 Days"
+            icon: mdi:percent-circle
+            color: green
+
+          - type: tile
+            entity: sensor.packet_loss_to_google
+            name: "Packet Loss"
+            icon: mdi:package-variant-remove
+            color: red
+
+      # ── Speed ─────────────────────────────────────────────────
+      - type: grid
+        title: Speed
+        column_span: 2
+        cards:
+          - type: gauge
+            entity: sensor.speedtest_download
+            name: "Download"
+            min: 0
+            max: 1000
+            needle: true
+            severity:
+              green: 200
+              yellow: 50
+              red: 0
+            unit: Mbit/s
+
+          - type: gauge
+            entity: sensor.speedtest_upload
+            name: "Upload"
+            min: 0
+            max: 300
+            needle: true
+            severity:
+              green: 50
+              yellow: 20
+              red: 0
+            unit: Mbit/s
+
+          - type: tile
+            entity: sensor.speedtest_ping
+            name: "SpeedTest Ping"
+            icon: mdi:swap-vertical
+            color: cyan
+
+      # ── Ping Times ────────────────────────────────────────────
+      - type: grid
+        title: Ping Times
+        column_span: 2
+        cards:
+[# for mon in ha_ping_monitors #]
+          - type: tile
+            entity: sensor.[% mon.slug %]
+            name: "[% mon.name | replace('Ping ', '') %]"
+            icon: mdi:lan-pending
+            color: cyan
+
+[# endfor #]
+
+      # ── 24 h Ping History ─────────────────────────────────────
+      - type: grid
+        title: "24 h Ping History"
+        column_span: 4
+        cards:
+          - type: history-graph
+            title: "Round Trip Time (ms)"
+            hours_to_show: 24
+            entities:
+[# for mon in ha_ping_monitors #]
+              - entity: sensor.[% mon.slug %]
+                name: "[% mon.name | replace('Ping ', '') %]"
+[# endfor #]
+
+      # ── 24 h Speed History ────────────────────────────────────
+      - type: grid
+        title: "24 h Speed History"
+        column_span: 4
+        cards:
+          - type: statistics-graph
+            title: "Download / Upload (Mbit/s)"
+            entities:
+              - entity: sensor.speedtest_download
+                name: "Download"
+              - entity: sensor.speedtest_upload
+                name: "Upload"
+            period: hour
+            chart_type: line
+            days_to_show: 1
+
+      # ── 7 Day Availability ────────────────────────────────────
+      - type: grid
+        title: "7 Day Availability"
+        column_span: 4
+        cards:
+          - type: history-graph
+            title: "Internet Up / Down"
+            hours_to_show: 168
+            entities:
+              - entity: binary_sensor.internet_up
+                name: "Internet"
+
+          - type: statistics-graph
+            title: "Packet Loss (%)"
+            entities:
+              - entity: sensor.packet_loss_to_google
+                name: "Google"
+            period: hour
+            chart_type: line
+            days_to_show: 7
+            stat_types:
+              - max
+              - mean
+
+      # ── 7 Day Speed Trend ─────────────────────────────────────
+      - type: grid
+        title: "7 Day Speed Trend"
+        column_span: 4
+        cards:
+          - type: statistics-graph
+            title: "Download / Upload (Mbit/s)"
+            entities:
+              - entity: sensor.speedtest_download
+                name: "Download"
+              - entity: sensor.speedtest_upload
+                name: "Upload"
+            period: hour
+            chart_type: line
+            days_to_show: 7
+
+          - type: statistics-graph
+            title: "Ping Latency (ms)"
+            entities:
+[# for mon in ha_ping_monitors #]
+[# if mon.slug != 'ping_att_router' #]
+              - entity: sensor.[% mon.slug %]
+                name: "[% mon.name | replace('Ping ', '') %]"
+[# endif #]
+[# endfor #]
+            period: hour
+            chart_type: line
+            days_to_show: 7
+            stat_types:
+              - mean
+              - max

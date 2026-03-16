@@ -44,24 +44,36 @@
     end: >
       {{ now().replace(hour=0, minute=0, second=0) }}
 
-# --- Network monitoring ---
-[# if ha_speedtest_enabled #]
-  - platform: speedtestdotnet
-    monitored_conditions:
-      - ping
-      - download
-      - upload
+# --- Internet uptime tracking (history_stats) ---
+# These feed the template sensors "Internet Uptime Today" and "Internet Uptime 7d"
+  - platform: history_stats
+    name: Internet Up Today Raw
+    entity_id: binary_sensor.internet_up
+    state: "on"
+    type: time
+    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    end: "{{ now() }}"
 
-[# endif #]
-[# for target in ha_ping_targets #]
-  - platform: ping
-    host: [% target.host %]
-    count: [% target.count %]
-    scan_interval: 60
-    name: [% target.name %]
+  - platform: history_stats
+    name: Internet Down Today Raw
+    entity_id: binary_sensor.internet_up
+    state: "off"
+    type: time
+    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    end: "{{ now() }}"
 
-[# endfor #]
-  - platform: command_line
-    name: Packet Loss to Google
-    command: "ping -c 10 8.8.8.8 | grep -oP '\\d+(?=% packet loss)'"
-    unit_of_measurement: "%"
+  - platform: history_stats
+    name: Internet Up 7d Raw
+    entity_id: binary_sensor.internet_up
+    state: "on"
+    type: time
+    start: "{{ now() - timedelta(days=7) }}"
+    end: "{{ now() }}"
+
+  - platform: history_stats
+    name: Internet Down 7d Raw
+    entity_id: binary_sensor.internet_up
+    state: "off"
+    type: time
+    start: "{{ now() - timedelta(days=7) }}"
+    end: "{{ now() }}"

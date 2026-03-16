@@ -74,16 +74,26 @@ ha_noaa_tide_prediction_station: "8723026"
 ha_noaa_tide_prediction_scan_interval: 1800
 
 # --- Network monitoring ---
-ha_ping_targets:
-  - host: 8.8.8.8
-    name: Ping to Google
-    count: 5
-  - host: 1.1.1.1
-    name: Ping to Cloudflare
-    count: 5
-  - host: 192.168.1.254
-    name: AT&T Router Reachable
-    count: 2
+# command_line sensors for ping RTT (ms).  The legacy "sensor: platform: ping"
+# format is removed in HA 2024+; config-flow ping gives only a binary_sensor.
+# command_line gives us numeric round-trip-time sensors we can graph.
+ha_ping_monitors:
+  - name: Ping Google US
+    host: 8.8.8.8
+    slug: ping_google_us          # → sensor.ping_google_us
+  - name: Ping Cloudflare
+    host: 1.1.1.1
+    slug: ping_cloudflare
+  - name: Ping BBC UK
+    host: 212.58.244.22           # bbc.co.uk - stable UK endpoint
+    slug: ping_bbc_uk
+  - name: Ping AT&T Router
+    host: 192.168.1.254
+    slug: ping_att_router
+
+# Scan interval for command_line ping sensors (seconds)
+ha_ping_scan_interval: 60
+ha_ping_count: 3
 
 # --- WH51 soil moisture sensors (via rtl_433 → MQTT) ---
 # Just the device IDs — templates generate the full MQTT sensor config.
@@ -104,9 +114,6 @@ ha_wh51_sensors:
   - id: "0e2851"
   - id: "0e28a2"
   - id: "0e29ec"
-
-# --- Speedtest ---
-ha_speedtest_enabled: true
 
 # --- HA restart method after config push ---
 # Options: "api" (call check-config then reload via REST API) or "none" (manual)
