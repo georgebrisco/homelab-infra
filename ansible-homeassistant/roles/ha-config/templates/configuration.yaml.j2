@@ -84,22 +84,44 @@ template:
         unit_of_measurement: "°C"
         state_class: measurement
         state: >
-          {% set return_temp = states('[% ha_ac_return_sensor %]')|float(0) %}
+          {% set return_raw = states('[% ha_ac_return_sensor %]') %}
+          {% if return_raw in ['unavailable','unknown'] %}
+            unavailable
+          {% else %}
+            {% set return_temp = return_raw | float(0) %}
+            {% set ns = namespace(total=0, count=0) %}
 [# for sensor in ha_ac_supply_sensors #]
-          {% set supply[% loop.index %] = states('[% sensor %]')|float(0) %}
+            {% set v = states('[% sensor %]') %}
+            {% if v not in ['unavailable','unknown'] and v | float(0) > 0 %}
+              {% set ns.total = ns.total + v | float %}
+              {% set ns.count = ns.count + 1 %}
+            {% endif %}
 [# endfor #]
-          {% set supply_mean = (([# for sensor in ha_ac_supply_sensors #]supply[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_ac_supply_sensors | length %]) %}
-          {{ (return_temp - supply_mean) | round(1) }}
+            {% if ns.count > 0 %}
+              {{ (return_temp - (ns.total / ns.count)) | round(1) }}
+            {% else %}
+              unavailable
+            {% endif %}
+          {% endif %}
   - sensor:
       - name: "Outdoor Temperature"
         unit_of_measurement: "°C"
         state_class: measurement
         device_class: temperature
         state: >
+          {% set ns = namespace(total=0, count=0) %}
 [# for sensor in ha_outdoor_temp_sensors #]
-          {% set t[% loop.index %] = states('[% sensor %]')|float(0) %}
+          {% set v = states('[% sensor %]') %}
+          {% if v not in ['unavailable','unknown'] and v | float(0) != 0 %}
+            {% set ns.total = ns.total + v | float %}
+            {% set ns.count = ns.count + 1 %}
+          {% endif %}
 [# endfor #]
-          {{ (([# for sensor in ha_outdoor_temp_sensors #]t[% loop.index %][# if not loop.last #] + [# endif #][# endfor #]) / [% ha_outdoor_temp_sensors | length %]) | round(1) }}
+          {% if ns.count > 0 %}
+            {{ (ns.total / ns.count) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
   - binary_sensor:
       - name: "Internet Up"
         unique_id: internet_up
