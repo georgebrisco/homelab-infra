@@ -17,9 +17,9 @@ views:
             content: |
               | Plant | Moisture | Battery | Last Seen |
               |:------|:--------:|:-------:|:----------|
-[# for sensor in ha_wh51_sensors -#]
+[# for sensor in ha_wh51_sensors #]
               | **[% sensor.name | default(sensor.id) %]** | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture') }}% | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery') }}% | {% if states('sensor.wh51_[% sensor.id %]_last_seen') not in ['unknown', 'unavailable'] %}{{ relative_time(states.sensor.wh51_[% sensor.id %]_last_seen.last_updated) }} ago{% else %}**No data**{% endif %} |
-[# endfor -#]
+[# endfor #]
 
       # ── Current Readings ───────────────────────────────────────
       - type: grid
