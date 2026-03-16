@@ -96,8 +96,7 @@ ha_outdoor_temp_sensors:
   - sensor.balcony_temphumid2_temperature
 
 # --- NOAA tides ---
-ha_noaa_tide_station_id: "8723214"
-ha_noaa_tide_prediction_station: "8723026"
+ha_noaa_tide_station_id: "8723026"       # Golden Beach, FL (nearest to Aventura)
 ha_noaa_tide_prediction_scan_interval: 1800
 
 # --- Network monitoring ---

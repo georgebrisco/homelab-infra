@@ -18,13 +18,6 @@
   - platform: noaa_tides
     station_id: [% ha_noaa_tide_station_id %]
 
-  - platform: rest
-    name: NOAA Tide Prediction
-    resource: "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=[% ha_noaa_tide_prediction_station %]&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&interval=h&format=json"
-    value_template: "{{ value_json.predictions[0].v }}"
-    unit_of_measurement: "ft"
-    scan_interval: [% ha_noaa_tide_prediction_scan_interval %]
-
 # --- HVAC runtime tracking ---
   - platform: history_stats
     name: AC Run Time Today

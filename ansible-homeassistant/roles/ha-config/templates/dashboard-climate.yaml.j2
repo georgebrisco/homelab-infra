@@ -159,13 +159,13 @@ views:
             icon: mdi:water-percent
             color: indigo
 
-      # ── Tides — Virginia Key, Biscayne Bay ────────────────────
+      # ── Tides — Golden Beach (NOAA 8723026) ────────────────────
       - type: grid
-        title: "Tides — Virginia Key"
+        title: "Tides — Golden Beach"
         column_span: 2
         cards:
           - type: tile
-            entity: sensor.noaa_tides_2
+            entity: sensor.noaa_tides_3
             name: "Current Tide"
             icon: mdi:waves
             color: blue
@@ -173,15 +173,15 @@ views:
           - type: markdown
             content: >
               **Next High:**
-              {{ as_timestamp(state_attr('sensor.noaa_tides_2', 'high_tide_time'))
+              {{ as_timestamp(state_attr('sensor.noaa_tides_3', 'high_tide_time'))
                  | timestamp_custom('%a %-I:%M %p') }}
-              ({{ state_attr('sensor.noaa_tides_2', 'high_tide_height') }} ft)
+              ({{ state_attr('sensor.noaa_tides_3', 'high_tide_height') }} ft)
 
 
               **Next Low:**
-              {{ as_timestamp(state_attr('sensor.noaa_tides_2', 'low_tide_time'))
+              {{ as_timestamp(state_attr('sensor.noaa_tides_3', 'low_tide_time'))
                  | timestamp_custom('%a %-I:%M %p') }}
-              ({{ state_attr('sensor.noaa_tides_2', 'low_tide_height') }} ft)
+              ({{ state_attr('sensor.noaa_tides_3', 'low_tide_height') }} ft)
 
       # ── 24 h Temperature History ───────────────────────────────
       - type: grid
