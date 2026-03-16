@@ -14,7 +14,7 @@
 #   - scenes.yaml / scripts.yaml (UI-managed, only created if missing)
 #
 # Prerequisites:
-#   - SSH access to HA host (hassio@192.168.50.11)
+#   - SSH access to HA host (hassio@192.168.50.5)
 #   - HA long-lived access token in Ansible Vault (for config reload)
 #   - TrueNAS SSH access (for backup sync)
 #

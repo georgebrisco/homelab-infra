@@ -17,6 +17,11 @@ views:
             content: >
               # {% if is_state('binary_sensor.internet_up', 'on') %}🟢 INTERNET UP{% else %}🔴 INTERNET DOWN{% endif %}
 
+
+              {% if is_state('binary_sensor.internet_wifi_up', 'on') %}🟢{% else %}🔴{% endif %} WiFi
+              &nbsp;&nbsp;&nbsp;
+              {% if is_state('binary_sensor.internet_ethernet_up', 'on') %}🟢{% else %}🔴{% endif %} Ethernet
+
           - type: tile
             entity: sensor.internet_uptime_today
             name: "Uptime Today"
@@ -29,11 +34,17 @@ views:
             icon: mdi:percent-circle
             color: green
 
-          - type: tile
+          - type: gauge
             entity: sensor.packet_loss_to_google
             name: "Packet Loss"
-            icon: mdi:package-variant-remove
-            color: red
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 0
+              yellow: 5
+              red: 15
+            unit: "%"
 
       # ── Speed ─────────────────────────────────────────────────
       - type: grid
@@ -77,7 +88,7 @@ views:
         cards:
 [# for mon in ha_ping_monitors #]
           - type: tile
-            entity: sensor.[% mon.slug %]
+            entity: sensor.[% mon.entity_id | default(mon.slug) %]
             name: "[% mon.name | replace('Ping ', '') %]"
             icon: mdi:lan-pending
             color: cyan
@@ -94,7 +105,7 @@ views:
             hours_to_show: 24
             entities:
 [# for mon in ha_ping_monitors #]
-              - entity: sensor.[% mon.slug %]
+              - entity: sensor.[% mon.entity_id | default(mon.slug) %]
                 name: "[% mon.name | replace('Ping ', '') %]"
 [# endfor #]
 
@@ -125,6 +136,10 @@ views:
             entities:
               - entity: binary_sensor.internet_up
                 name: "Internet"
+              - entity: binary_sensor.internet_wifi_up
+                name: "WiFi"
+              - entity: binary_sensor.internet_ethernet_up
+                name: "Ethernet"
 
           - type: statistics-graph
             title: "Packet Loss (%)"
@@ -158,8 +173,8 @@ views:
             title: "Ping Latency (ms)"
             entities:
 [# for mon in ha_ping_monitors #]
-[# if mon.slug != 'ping_att_router' #]
-              - entity: sensor.[% mon.slug %]
+[# if mon.source_ip is not defined #]
+              - entity: sensor.[% mon.entity_id | default(mon.slug) %]
                 name: "[% mon.name | replace('Ping ', '') %]"
 [# endif #]
 [# endfor #]

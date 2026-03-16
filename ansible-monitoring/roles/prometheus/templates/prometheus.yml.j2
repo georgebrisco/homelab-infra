@@ -31,7 +31,7 @@ scrape_configs:
     metrics_path: /api/prometheus
     bearer_token: '{{ ha_api_token }}'
     static_configs:
-      - targets: ['{{ hostvars["homeassistant"]["ansible_host"] | default("192.168.50.11") }}:8123']
+      - targets: ['{{ hostvars["homeassistant"]["ansible_host"] | default("192.168.50.5") }}:8123']
         labels:
           instance: homeassistant
 {% endif %}

@@ -80,16 +80,25 @@ ha_noaa_tide_prediction_scan_interval: 1800
 ha_ping_monitors:
   - name: Ping Google US
     host: 8.8.8.8
-    slug: ping_google_us          # → sensor.ping_google_us
+    slug: ping_google_us            # → sensor.ping_google_us
   - name: Ping Cloudflare
     host: 1.1.1.1
-    slug: ping_cloudflare
+    slug: ping_cloudflare           # → sensor.ping_cloudflare
   - name: Ping BBC UK
-    host: 212.58.244.22           # bbc.co.uk - stable UK endpoint
-    slug: ping_bbc_uk
+    host: 212.58.244.22             # bbc.co.uk — stable UK endpoint
+    slug: ping_bbc_uk               # → sensor.ping_bbc_uk
   - name: Ping AT&T Router
-    host: 192.168.1.254
-    slug: ping_att_router
+    host: 192.168.50.1              # AT&T gateway — our route to the internet
+    slug: ping_att_router            # unique_id in HA registry
+    entity_id: ping_at_t_router      # HA entity_id (slugified from name, differs from unique_id)
+  - name: Ping WiFi
+    host: 8.8.8.8
+    slug: ping_wifi                 # → sensor.ping_wifi
+    source_ip: "192.168.50.11"      # wlan0 — forces ping over WiFi path
+  - name: Ping Ethernet
+    host: 8.8.8.8
+    slug: ping_ethernet             # → sensor.ping_ethernet
+    source_ip: "192.168.50.5"       # end0 — forces ping over wired path
 
 # Scan interval for command_line ping sensors (seconds)
 ha_ping_scan_interval: 60
@@ -118,6 +127,6 @@ ha_wh51_sensors:
 # --- HA restart method after config push ---
 # Options: "api" (call check-config then reload via REST API) or "none" (manual)
 ha_reload_method: api
-ha_api_url: "http://192.168.50.11:8123"
+ha_api_url: "http://192.168.50.5:8123"
 # ha_api_token should be set in group_vars via Ansible Vault — see README
 # ha_api_token: ""
