@@ -245,12 +245,12 @@ views:
           - type: statistics-graph
             title: "Daily Runtime (hours)"
             entities:
-              - entity: sensor.ac_run_time_today
+              - entity: sensor.daily_cooling_hours
                 name: "Cooling"
-              - entity: sensor.heating_run_time_today
+              - entity: sensor.daily_heating_hours
                 name: "Heating"
             period: day
             chart_type: bar
             days_to_show: 7
             stat_types:
-              - max
+              - change

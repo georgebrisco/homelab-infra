@@ -125,6 +125,21 @@ template:
           {% else %}
             unavailable
           {% endif %}
+  - sensor:
+      - name: "Daily Cooling Hours"
+        unique_id: daily_cooling_hours
+        unit_of_measurement: "h"
+        device_class: duration
+        state_class: total_increasing
+        state: >
+          {{ states('sensor.ac_run_time_today') | float(0) }}
+      - name: "Daily Heating Hours"
+        unique_id: daily_heating_hours
+        unit_of_measurement: "h"
+        device_class: duration
+        state_class: total_increasing
+        state: >
+          {{ states('sensor.heating_run_time_today') | float(0) }}
   - binary_sensor:
       - name: "Internet Up"
         unique_id: internet_up
