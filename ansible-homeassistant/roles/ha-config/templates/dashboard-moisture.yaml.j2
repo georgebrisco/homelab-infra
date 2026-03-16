@@ -1,15 +1,7 @@
 #jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
 [! Plant moisture dashboard — managed by Ansible
    Source: ansible-homeassistant/roles/ha-config/templates/dashboard-moisture.yaml.j2
-
-   Entity resolution: most WH51 sensors use Ansible-managed MQTT entities
-   (sensor.wh51_<id>_wh51_<id>_moisture), but some were auto-discovered by
-   MQTT and have different entity IDs.  The moisture_entity / battery_entity
-   overrides in ha_wh51_sensors handle this.
 !]
-[! Macro to resolve the moisture entity ID for a sensor !]
-[# macro moisture_eid(s) #][% s.moisture_entity | default('sensor.wh51_' ~ s.id ~ '_wh51_' ~ s.id ~ '_moisture') %][# endmacro #]
-[# macro battery_eid(s) #][% s.battery_entity | default('sensor.wh51_' ~ s.id ~ '_wh51_' ~ s.id ~ '_battery') %][# endmacro #]
 title: Plant Moisture
 views:
   - title: Plant Moisture
@@ -22,15 +14,12 @@ views:
         column_span: 4
         cards:
           - type: markdown
-            content: >
+            content: |
               | Plant | Moisture | Battery | Last Seen |
-
               |:------|:--------:|:-------:|:----------|
-
-              [# for sensor in ha_wh51_sensors #]
-              | **[% sensor.name | default(sensor.id) %]** | {{ states('[% moisture_eid(sensor) %]') }}% | {{ states('[% battery_eid(sensor) %]') }}% | {% if states('sensor.wh51_[% sensor.id %]_last_seen') not in ['unknown', 'unavailable'] %}{{ relative_time(states.sensor.wh51_[% sensor.id %]_last_seen.last_updated) }} ago{% else %}**No data**{% endif %} |
-
-              [# endfor #]
+[# for sensor in ha_wh51_sensors -#]
+              | **[% sensor.name | default(sensor.id) %]** | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture') }}% | {{ states('sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery') }}% | {% if states('sensor.wh51_[% sensor.id %]_last_seen') not in ['unknown', 'unavailable'] %}{{ relative_time(states.sensor.wh51_[% sensor.id %]_last_seen.last_updated) }} ago{% else %}**No data**{% endif %} |
+[# endfor -#]
 
       # ── Current Readings ───────────────────────────────────────
       - type: grid
@@ -39,7 +28,7 @@ views:
         cards:
 [# for sensor in ha_wh51_sensors #]
           - type: tile
-            entity: [% moisture_eid(sensor) %]
+            entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
             name: "[% sensor.name | default(sensor.id) %]"
             icon: mdi:water-percent
             color: green
@@ -52,7 +41,7 @@ views:
         cards:
 [# for sensor in ha_wh51_sensors #]
           - type: tile
-            entity: [% battery_eid(sensor) %]
+            entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_battery
             name: "[% sensor.name | default(sensor.id) %]"
             color: amber
 [# endfor #]
@@ -66,6 +55,6 @@ views:
           - type: history-graph
             hours_to_show: 168
             entities:
-              - entity: [% moisture_eid(sensor) %]
+              - entity: sensor.wh51_[% sensor.id %]_wh51_[% sensor.id %]_moisture
                 name: "Moisture %"
 [# endfor #]

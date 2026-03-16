@@ -45,12 +45,8 @@ ha_wh51_sensors:
     name: Aglaonema
   - id: "0e184b"
     name: Large Mixed Tradescantia
-    moisture_entity: sensor.soil_moisture_wh51_0e184b_mqtt_sensor
-    battery_entity: sensor.soil_moisture_wh51_0e184b_mqtt_sensor_3
   - id: "0ee085"
     name: Coffee Plant
-    moisture_entity: sensor.soil_moisture_wh51_0ee085_wh51_0ee085_moisture
-    battery_entity: sensor.soil_moisture_wh51_0ee085_wh51_0ee085_battery_ok
   - id: "0effd0"
     name: Unknown Plant
 
