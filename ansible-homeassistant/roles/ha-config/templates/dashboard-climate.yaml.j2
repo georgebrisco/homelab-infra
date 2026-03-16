@@ -120,15 +120,15 @@ views:
 
           - type: tile
             entity: sensor.ac_run_time_today
-            name: "Run Time Today"
-            icon: mdi:timer-outline
+            name: "Cooling Today"
+            icon: mdi:snowflake
             color: teal
 
           - type: tile
-            entity: sensor.ac_run_time_yesterday
-            name: "Run Time Yesterday"
-            icon: mdi:timer-check-outline
-            color: grey
+            entity: sensor.heating_run_time_today
+            name: "Heating Today"
+            icon: mdi:fire
+            color: orange
 
       # ── Humidity ───────────────────────────────────────────────
       - type: grid
@@ -234,3 +234,23 @@ views:
             entities:
               - entity: binary_sensor.hvac_cooling
                 name: "Cooling Active"
+              - entity: binary_sensor.hvac_heating
+                name: "Heating Active"
+
+      # ── 7 Day AC Runtime ─────────────────────────────────────
+      - type: grid
+        title: "7 Day AC Runtime"
+        column_span: 4
+        cards:
+          - type: statistics-graph
+            title: "Daily Runtime (hours)"
+            entities:
+              - entity: sensor.ac_run_time_today
+                name: "Cooling"
+              - entity: sensor.heating_run_time_today
+                name: "Heating"
+            period: day
+            chart_type: bar
+            days_to_show: 7
+            stat_types:
+              - max

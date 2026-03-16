@@ -79,6 +79,9 @@ template:
       - name: "HVAC Cooling"
         state: >
           {{ states('sensor.t9_hvac_action') == 'cooling' }}
+      - name: "HVAC Heating"
+        state: >
+          {{ states('sensor.t9_hvac_action') == 'heating' }}
   - sensor:
       - name: "AC Delta T"
         unit_of_measurement: "°C"

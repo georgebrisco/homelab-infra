@@ -35,14 +35,12 @@
     end: "{{ now() }}"
 
   - platform: history_stats
-    name: AC Run Time Yesterday
+    name: Heating Run Time Today
     entity_id: sensor.t9_hvac_action
-    state: cooling
+    state: heating
     type: time
-    start: >
-      {{ (now() - timedelta(days=1)).replace(hour=0, minute=0, second=0) }}
-    end: >
-      {{ now().replace(hour=0, minute=0, second=0) }}
+    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    end: "{{ now() }}"
 
 # --- Internet uptime tracking (history_stats) ---
 # These feed the template sensors "Internet Uptime Today" and "Internet Uptime 7d"
