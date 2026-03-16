@@ -145,18 +145,21 @@ template:
         unique_id: internet_up
         device_class: connectivity
         state: >
-          {{ states('sensor.ping_google_us') | float(0) > 0
-             or states('sensor.ping_cloudflare') | float(0) > 0 }}
+          {{ states('sensor.ping_google_wired') | float(0) > 0
+             or states('sensor.ping_cloudflare_wired') | float(0) > 0
+             or states('sensor.ping_google_wifi') | float(0) > 0 }}
       - name: "Internet WiFi Up"
         unique_id: internet_wifi_up
         device_class: connectivity
         state: >
-          {{ states('sensor.ping_wifi') | float(0) > 0 }}
+          {{ states('sensor.ping_google_wifi') | float(0) > 0
+             or states('sensor.ping_cloudflare_wifi') | float(0) > 0 }}
       - name: "Internet Ethernet Up"
         unique_id: internet_ethernet_up
         device_class: connectivity
         state: >
-          {{ states('sensor.ping_ethernet') | float(0) > 0 }}
+          {{ states('sensor.ping_google_wired') | float(0) > 0
+             or states('sensor.ping_cloudflare_wired') | float(0) > 0 }}
   - sensor:
       - name: "Internet Uptime Today"
         unique_id: internet_uptime_today
@@ -205,3 +208,23 @@ command_line:
       unit_of_measurement: "%"
       value_template: "{{ value | int(100) }}"
       scan_interval: 120
+  - sensor:
+      name: "DNS Resolution Time"
+      unique_id: dns_resolution_time
+      command: "dig @[% ha_dns_server %] $(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' ').[% ha_dns_test_host %] +noall +stats 2>/dev/null | grep 'Query time' | awk '{print $4}' || echo ''"
+      unit_of_measurement: "ms"
+      value_template: "{{ value | int(0) }}"
+      scan_interval: 120
+  - sensor:
+      name: "Ping Jitter"
+      unique_id: ping_jitter
+      command: "ping -c [% ha_jitter_count %] -W 5 [% ha_jitter_host %] 2>/dev/null | tail -1 | awk -F '/' '{printf \"%.1f\", $7}' || echo ''"
+      unit_of_measurement: "ms"
+      value_template: "{{ value | float(0) }}"
+      scan_interval: 120
+  - sensor:
+      name: "External IP"
+      unique_id: external_ip
+      command: "curl -s -m 10 https://api.ipify.org 2>/dev/null || echo 'unavailable'"
+      value_template: "{{ value }}"
+      scan_interval: 3600

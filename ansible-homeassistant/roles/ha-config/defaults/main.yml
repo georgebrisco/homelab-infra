@@ -77,32 +77,90 @@ ha_noaa_tide_prediction_scan_interval: 1800
 # command_line sensors for ping RTT (ms).  The legacy "sensor: platform: ping"
 # format is removed in HA 2024+; config-flow ping gives only a binary_sensor.
 # command_line gives us numeric round-trip-time sensors we can graph.
-ha_ping_monitors:
-  - name: Ping Google US
+#
+# Wired pings go over end0 (192.168.50.5); WiFi pings go over wlan0 (192.168.50.11).
+# Both groups hit the same targets so you can compare the two paths side by side.
+
+ha_wired_source_ip: "192.168.50.5"
+ha_wifi_source_ip: "192.168.50.11"
+
+ha_ping_targets:
+  - name: Google
     host: 8.8.8.8
-    slug: ping_google_us            # → sensor.ping_google_us
-  - name: Ping Cloudflare
+    slug: google
+  - name: Cloudflare
     host: 1.1.1.1
-    slug: ping_cloudflare           # → sensor.ping_cloudflare
-  - name: Ping BBC UK
+    slug: cloudflare
+  - name: BBC UK
     host: 212.58.244.22             # bbc.co.uk — stable UK endpoint
-    slug: ping_bbc_uk               # → sensor.ping_bbc_uk
-  - name: Ping AT&T Router
+    slug: bbc_uk
+  - name: AT&T Router
     host: 192.168.50.1              # AT&T gateway — our route to the internet
-    slug: ping_att_router            # unique_id in HA registry
-    entity_id: ping_at_t_router      # HA entity_id (slugified from name, differs from unique_id)
-  - name: Ping WiFi
+    slug: att_router
+
+# Generated from ha_ping_targets × {wired, wifi}.
+# Also includes a legacy entity_id mapping for AT&T (HA slugified "Ping AT&T Router"
+# differently from the unique_id we set).
+ha_ping_monitors:
+  # ── Wired (end0) ──
+  - name: Ping Google Wired
     host: 8.8.8.8
-    slug: ping_wifi                 # → sensor.ping_wifi
-    source_ip: "192.168.50.11"      # wlan0 — forces ping over WiFi path
-  - name: Ping Ethernet
+    slug: ping_google_wired
+    source_ip: "192.168.50.5"
+    group: wired
+  - name: Ping Cloudflare Wired
+    host: 1.1.1.1
+    slug: ping_cloudflare_wired
+    source_ip: "192.168.50.5"
+    group: wired
+  - name: Ping BBC UK Wired
+    host: 212.58.244.22
+    slug: ping_bbc_uk_wired
+    source_ip: "192.168.50.5"
+    group: wired
+  - name: Ping AT&T Router Wired
+    host: 192.168.50.1
+    slug: ping_att_router_wired
+    entity_id: ping_at_t_router_wired    # HA slugifies "AT&T" → "at_t"
+    source_ip: "192.168.50.5"
+    group: wired
+  # ── WiFi (wlan0) ──
+  - name: Ping Google WiFi
     host: 8.8.8.8
-    slug: ping_ethernet             # → sensor.ping_ethernet
-    source_ip: "192.168.50.5"       # end0 — forces ping over wired path
+    slug: ping_google_wifi
+    source_ip: "192.168.50.11"
+    group: wifi
+  - name: Ping Cloudflare WiFi
+    host: 1.1.1.1
+    slug: ping_cloudflare_wifi
+    source_ip: "192.168.50.11"
+    group: wifi
+  - name: Ping BBC UK WiFi
+    host: 212.58.244.22
+    slug: ping_bbc_uk_wifi
+    source_ip: "192.168.50.11"
+    group: wifi
+  - name: Ping AT&T Router WiFi
+    host: 192.168.50.1
+    slug: ping_att_router_wifi
+    entity_id: ping_at_t_router_wifi     # HA slugifies "AT&T" → "at_t"
+    source_ip: "192.168.50.11"
+    group: wifi
 
 # Scan interval for command_line ping sensors (seconds)
 ha_ping_scan_interval: 60
 ha_ping_count: 3
+
+# --- DNS resolution time ---
+# Measures how long it takes to resolve a name via the configured DNS server.
+# Uses dig against AdGuard (primary DNS).
+ha_dns_server: "192.168.50.2"
+ha_dns_test_host: "google.com"
+
+# --- Jitter ---
+# Computed from ping -c 10 mdev (mean deviation) — a good proxy for jitter.
+ha_jitter_host: 8.8.8.8
+ha_jitter_count: 10
 
 # --- WH51 soil moisture sensors (via rtl_433 → MQTT) ---
 # Just the device IDs — templates generate the full MQTT sensor config.

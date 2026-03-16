@@ -34,21 +34,38 @@ views:
             icon: mdi:percent-circle
             color: green
 
-          - type: gauge
+          - type: tile
+            entity: sensor.external_ip
+            name: "Public IP"
+            icon: mdi:earth
+            color: blue-grey
+
+      # ── Network Health ───────────────────────────────────────
+      - type: grid
+        title: "Network Health"
+        column_span: 4
+        cards:
+          - type: tile
             entity: sensor.packet_loss_to_google
             name: "Packet Loss"
-            min: 0
-            max: 100
-            needle: true
-            severity:
-              green: 0
-              yellow: 5
-              red: 15
-            unit: "%"
+            icon: mdi:package-variant-closed-check
+            color: green
 
-      # ── Speed ─────────────────────────────────────────────────
+          - type: tile
+            entity: sensor.dns_resolution_time
+            name: "DNS Lookup"
+            icon: mdi:dns-outline
+            color: cyan
+
+          - type: tile
+            entity: sensor.ping_jitter
+            name: "Jitter"
+            icon: mdi:sine-wave
+            color: cyan
+
+      # ── Speed ────────────────────────────────────────────────
       - type: grid
-        title: Speed
+        title: "Speed"
         column_span: 2
         cards:
           - type: gauge
@@ -81,35 +98,71 @@ views:
             icon: mdi:swap-vertical
             color: cyan
 
-      # ── Ping Times ────────────────────────────────────────────
+      # ── Wired Pings (end0) ──────────────────────────────────
       - type: grid
-        title: Ping Times
+        title: "Wired Pings"
         column_span: 2
         cards:
 [# for mon in ha_ping_monitors #]
+[# if mon.group == 'wired' #]
           - type: tile
             entity: sensor.[% mon.entity_id | default(mon.slug) %]
-            name: "[% mon.name | replace('Ping ', '') %]"
-            icon: mdi:lan-pending
+            name: "[% mon.name | replace('Ping ', '') | replace(' Wired', '') %]"
+            icon: mdi:ethernet
             color: cyan
 
+[# endif #]
 [# endfor #]
 
-      # ── 24 h Ping History ─────────────────────────────────────
+      # ── WiFi Pings (wlan0) ──────────────────────────────────
       - type: grid
-        title: "24 h Ping History"
+        title: "WiFi Pings"
+        column_span: 2
+        cards:
+[# for mon in ha_ping_monitors #]
+[# if mon.group == 'wifi' #]
+          - type: tile
+            entity: sensor.[% mon.entity_id | default(mon.slug) %]
+            name: "[% mon.name | replace('Ping ', '') | replace(' WiFi', '') %]"
+            icon: mdi:wifi
+            color: cyan
+
+[# endif #]
+[# endfor #]
+
+      # ── 24 h Wired Ping History ─────────────────────────────
+      - type: grid
+        title: "24 h Wired Latency"
         column_span: 4
         cards:
           - type: history-graph
-            title: "Round Trip Time (ms)"
+            title: "Wired Round Trip Time (ms)"
             hours_to_show: 24
             entities:
 [# for mon in ha_ping_monitors #]
+[# if mon.group == 'wired' #]
               - entity: sensor.[% mon.entity_id | default(mon.slug) %]
-                name: "[% mon.name | replace('Ping ', '') %]"
+                name: "[% mon.name | replace('Ping ', '') | replace(' Wired', '') %]"
+[# endif #]
 [# endfor #]
 
-      # ── 24 h Speed History ────────────────────────────────────
+      # ── 24 h WiFi Ping History ──────────────────────────────
+      - type: grid
+        title: "24 h WiFi Latency"
+        column_span: 4
+        cards:
+          - type: history-graph
+            title: "WiFi Round Trip Time (ms)"
+            hours_to_show: 24
+            entities:
+[# for mon in ha_ping_monitors #]
+[# if mon.group == 'wifi' #]
+              - entity: sensor.[% mon.entity_id | default(mon.slug) %]
+                name: "[% mon.name | replace('Ping ', '') | replace(' WiFi', '') %]"
+[# endif #]
+[# endfor #]
+
+      # ── 24 h Speed History ──────────────────────────────────
       - type: grid
         title: "24 h Speed History"
         column_span: 4
@@ -125,7 +178,7 @@ views:
             chart_type: line
             days_to_show: 1
 
-      # ── 7 Day Availability ────────────────────────────────────
+      # ── 7 Day Availability ──────────────────────────────────
       - type: grid
         title: "7 Day Availability"
         column_span: 4
@@ -153,7 +206,7 @@ views:
               - max
               - mean
 
-      # ── 7 Day Speed Trend ─────────────────────────────────────
+      # ── 7 Day Speed & Latency Trend ─────────────────────────
       - type: grid
         title: "7 Day Speed Trend"
         column_span: 4
@@ -170,12 +223,12 @@ views:
             days_to_show: 7
 
           - type: statistics-graph
-            title: "Ping Latency (ms)"
+            title: "Wired Ping Latency (ms)"
             entities:
 [# for mon in ha_ping_monitors #]
-[# if mon.source_ip is not defined #]
+[# if mon.group == 'wired' #]
               - entity: sensor.[% mon.entity_id | default(mon.slug) %]
-                name: "[% mon.name | replace('Ping ', '') %]"
+                name: "[% mon.name | replace('Ping ', '') | replace(' Wired', '') %]"
 [# endif #]
 [# endfor #]
             period: hour
