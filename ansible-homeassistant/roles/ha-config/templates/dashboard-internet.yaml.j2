@@ -63,6 +63,38 @@ views:
             icon: mdi:sine-wave
             color: cyan
 
+      # ── Wired Pings (end0) ──────────────────────────────────
+      - type: grid
+        title: "Wired Pings"
+        column_span: 2
+        cards:
+[# for mon in ha_ping_monitors #]
+[# if mon.group == 'wired' #]
+          - type: tile
+            entity: sensor.[% mon.entity_id | default(mon.slug) %]
+            name: "[% mon.name | replace('Ping ', '') | replace(' Wired', '') %]"
+            icon: mdi:ethernet
+            color: cyan
+
+[# endif #]
+[# endfor #]
+
+      # ── WiFi Pings (wlan0) ──────────────────────────────────
+      - type: grid
+        title: "WiFi Pings"
+        column_span: 2
+        cards:
+[# for mon in ha_ping_monitors #]
+[# if mon.group == 'wifi' #]
+          - type: tile
+            entity: sensor.[% mon.entity_id | default(mon.slug) %]
+            name: "[% mon.name | replace('Ping ', '') | replace(' WiFi', '') %]"
+            icon: mdi:wifi
+            color: cyan
+
+[# endif #]
+[# endfor #]
+
       # ── Speed ────────────────────────────────────────────────
       - type: grid
         title: "Speed"
@@ -97,38 +129,6 @@ views:
             name: "SpeedTest Ping"
             icon: mdi:swap-vertical
             color: cyan
-
-      # ── Wired Pings (end0) ──────────────────────────────────
-      - type: grid
-        title: "Wired Pings"
-        column_span: 2
-        cards:
-[# for mon in ha_ping_monitors #]
-[# if mon.group == 'wired' #]
-          - type: tile
-            entity: sensor.[% mon.entity_id | default(mon.slug) %]
-            name: "[% mon.name | replace('Ping ', '') | replace(' Wired', '') %]"
-            icon: mdi:ethernet
-            color: cyan
-
-[# endif #]
-[# endfor #]
-
-      # ── WiFi Pings (wlan0) ──────────────────────────────────
-      - type: grid
-        title: "WiFi Pings"
-        column_span: 2
-        cards:
-[# for mon in ha_ping_monitors #]
-[# if mon.group == 'wifi' #]
-          - type: tile
-            entity: sensor.[% mon.entity_id | default(mon.slug) %]
-            name: "[% mon.name | replace('Ping ', '') | replace(' WiFi', '') %]"
-            icon: mdi:wifi
-            color: cyan
-
-[# endif #]
-[# endfor #]
 
       # ── 24 h Wired Ping History ─────────────────────────────
       - type: grid
