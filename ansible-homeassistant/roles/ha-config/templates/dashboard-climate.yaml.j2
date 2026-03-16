@@ -159,6 +159,30 @@ views:
             icon: mdi:water-percent
             color: indigo
 
+      # ── Tides — Virginia Key, Biscayne Bay ────────────────────
+      - type: grid
+        title: "Tides — Virginia Key"
+        column_span: 2
+        cards:
+          - type: tile
+            entity: sensor.noaa_tides_2
+            name: "Current Tide"
+            icon: mdi:waves
+            color: blue
+
+          - type: markdown
+            content: >
+              **Next High:**
+              {{ as_timestamp(state_attr('sensor.noaa_tides_2', 'high_tide_time'))
+                 | timestamp_custom('%a %-I:%M %p') }}
+              ({{ state_attr('sensor.noaa_tides_2', 'high_tide_height') }} ft)
+
+
+              **Next Low:**
+              {{ as_timestamp(state_attr('sensor.noaa_tides_2', 'low_tide_time'))
+                 | timestamp_custom('%a %-I:%M %p') }}
+              ({{ state_attr('sensor.noaa_tides_2', 'low_tide_height') }} ft)
+
       # ── 24 h Temperature History ───────────────────────────────
       - type: grid
         title: "24 h Temperature History"
