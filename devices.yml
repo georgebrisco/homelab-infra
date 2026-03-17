@@ -28,13 +28,13 @@ managed_devices:
     mac: "2c:cf:67:81:f4:03"
     ip: "192.168.50.53"
     ansible_user: root
-    roles: [iot, gardener]
+    roles: [iot, rpi, gardener]
 
   - name: panoptes
     mac: "d8:3a:dd:f1:37:21"
     ip: "192.168.50.61"
     ansible_user: root
-    roles: [rpi]
+    roles: [iot, rpi]
 
 non_managed_reservations:
   - { name: xt8-wap,    mac: "7c:10:c9:e4:a9:90", ip: "192.168.50.3" }

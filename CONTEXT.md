@@ -164,8 +164,8 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 | steam | .12 | 58:47:ca:77:85:fd | root | proxmox_host | Proxmox 8 hypervisor |
 | homeassistant | .5 | d8:3a:dd:cd:a8:b4 | hassio | iot, homeautomation | HA Yellow, HAOS (s6 init) |
 | truenas | .44 | bc:24:11:00:35:85 | root | storage | Immutable /usr, node_exporter at /root/bin/ |
-| gardener | .53 | 2c:cf:67:81:f4:03 | root | iot, gardener | Raspberry Pi, USB SDR, rtl_433 + moisture_proxy |
-| panoptes | .61 | d8:3a:dd:f1:37:21 | root | rpi | Raspberry Pi 4B, Camera Module 3 (IMX708), RTSP streaming |
+| gardener | .53 | 2c:cf:67:81:f4:03 | root | iot, rpi, gardener | Raspberry Pi, USB SDR, rtl_433 + moisture_proxy |
+| panoptes | .61 | d8:3a:dd:f1:37:21 | root | iot, rpi | Raspberry Pi 4B, Camera Module 3 (IMX708), RTSP streaming |
 
 **Non-managed** (get DHCP + DNS only):
 
