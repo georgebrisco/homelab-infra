@@ -33,3 +33,5 @@ paths:
     rpiCameraFPS: {{ camera_fps }}
     rpiCameraBitrate: {{ camera_bitrate }}
     rpiCameraCodec: auto
+    rpiCameraHFlip: {{ camera_hflip | default(false) | lower }}
+    rpiCameraVFlip: {{ camera_vflip | default(false) | lower }}
