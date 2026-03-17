@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-17 (after panoptes camera streaming, HA cameras dashboard, TBS migration).
+> Last updated: 2026-03-17 (after Migadu email setup for theteablendstudio.com).
 
 ## Overview
 
@@ -45,6 +45,7 @@ homelab-infra/
 │       ├── mqtt.yml                 # Shared MQTT broker config
 │       ├── homeassistant.yml        # HA non-secret overrides
 │       └── homeassistant_vault.yml  # [ansible-vault] HA API token
+│       └── migadu_vault.yml          # [ansible-vault] Migadu API key
 ├── CONTEXT.md                       # This file
 ├── README.md                        # User-facing README with architecture + DR guide
 ├── Makefile                         # Convenience targets: make help for full list
@@ -202,6 +203,24 @@ Website for theteablendstudio.com, a Vite/React SPA. Deployed from a bare git re
 - Deploy tasks: git clone/pull, npm install, vite build, PM2 start/restart, PM2 save + startup
 - `tbs_git_version` variable controls which branch to check out (default: `master`, production override: `production`)
 
+## Migadu Email (theteablendstudio.com)
+
+Hosted email via Migadu (migadu.com). Low-volume (\~50 emails/week), 2–3 mailboxes initially, up to 6.
+
+**Why hosted**: Residential ISP (AT&T) blocks port 25 outbound, no custom PTR records possible. Self-hosted email would fail deliverability checks. Migadu handles MX, DKIM signing, and IP reputation.
+
+**DNS records** (13 total, managed in Terraform as `cloudflare_record` resources):
+- Domain verification: TXT (`hosted-email-verify=44q3qpqr`)
+- MX: `aspmx1.migadu.com` (pri 10), `aspmx2.migadu.com` (pri 20)
+- SPF: TXT (`v=spf1 include:spf.migadu.com -all`)
+- DKIM: 3 CNAME records (`key1._domainkey` → `key1.theteablendstudio.com._domainkey.migadu.com`, etc.)
+- DMARC: TXT (`v=DMARC1; p=quarantine; adkim=r; aspf=r;`)
+- Autodiscovery: autoconfig CNAME + 4 SRV records (autodiscover, submissions, imaps, pop3s)
+
+**Terraform resources**: `tbs_migadu_verify`, `tbs_mx_primary`, `tbs_mx_secondary`, `tbs_spf`, `tbs_dkim_key1–3`, `tbs_dmarc`, `tbs_autoconfig`, `tbs_autodiscover`, `tbs_submissions`, `tbs_imaps`, `tbs_pop3s`
+
+**API key**: Stored in `group_vars/all/migadu_vault.yml` (ansible-vault encrypted). Variable: `migadu_api_key`.
+
 ## Panoptes Camera Streaming
 
 Raspberry Pi 4B with Pi Camera Module 3, streaming via mediamtx v1.16.3.
@@ -326,6 +345,7 @@ ansible-playbook -i scripts/terraform_inventory.py ansible-panoptes/configure.ym
 | secrets.auto.tfvars | proxmox_password, container_root_password, cloudflare_api_token |
 | .vault_pass | Ansible vault password (referenced by ansible.cfg) |
 | group_vars/all/homeassistant_vault.yml | ha_api_token (ansible-vault encrypted) |
+| group_vars/all/migadu_vault.yml | migadu_api_key (ansible-vault encrypted) |
 | ansible-router/group_vars/all/secrets.yml | omada_username, omada_password |
 | ansible-k3s/group_vars/all/vault.yml | proxmox_password, ansible_ssh_pass |
 

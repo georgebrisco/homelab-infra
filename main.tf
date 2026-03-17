@@ -710,3 +710,147 @@ resource "cloudflare_record" "brisco_apex" {
   proxied = true
   comment = "dolphin app tunnel"
 }
+
+# =============================================================================
+# Migadu email — theteablendstudio.com
+# =============================================================================
+
+# Domain verification
+resource "cloudflare_record" "tbs_migadu_verify" {
+  zone_id = var.tbs_zone_id
+  name    = "theteablendstudio.com"
+  type    = "TXT"
+  content = "hosted-email-verify=44q3qpqr"
+  comment = "Migadu domain verification"
+}
+
+# MX records
+resource "cloudflare_record" "tbs_mx_primary" {
+  zone_id  = var.tbs_zone_id
+  name     = "theteablendstudio.com"
+  type     = "MX"
+  content  = "aspmx1.migadu.com"
+  priority = 10
+  comment  = "Migadu primary MX"
+}
+
+resource "cloudflare_record" "tbs_mx_secondary" {
+  zone_id  = var.tbs_zone_id
+  name     = "theteablendstudio.com"
+  type     = "MX"
+  content  = "aspmx2.migadu.com"
+  priority = 20
+  comment  = "Migadu secondary MX"
+}
+
+# SPF
+resource "cloudflare_record" "tbs_spf" {
+  zone_id = var.tbs_zone_id
+  name    = "theteablendstudio.com"
+  type    = "TXT"
+  content = "v=spf1 include:spf.migadu.com -all"
+  comment = "Migadu SPF"
+}
+
+# DKIM (CNAME to Migadu key servers — must NOT be proxied)
+resource "cloudflare_record" "tbs_dkim_key1" {
+  zone_id = var.tbs_zone_id
+  name    = "key1._domainkey"
+  type    = "CNAME"
+  content = "key1.theteablendstudio.com._domainkey.migadu.com"
+  proxied = false
+  comment = "Migadu DKIM key 1"
+}
+
+resource "cloudflare_record" "tbs_dkim_key2" {
+  zone_id = var.tbs_zone_id
+  name    = "key2._domainkey"
+  type    = "CNAME"
+  content = "key2.theteablendstudio.com._domainkey.migadu.com"
+  proxied = false
+  comment = "Migadu DKIM key 2"
+}
+
+resource "cloudflare_record" "tbs_dkim_key3" {
+  zone_id = var.tbs_zone_id
+  name    = "key3._domainkey"
+  type    = "CNAME"
+  content = "key3.theteablendstudio.com._domainkey.migadu.com"
+  proxied = false
+  comment = "Migadu DKIM key 3"
+}
+
+# DMARC
+resource "cloudflare_record" "tbs_dmarc" {
+  zone_id = var.tbs_zone_id
+  name    = "_dmarc"
+  type    = "TXT"
+  content = "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;"
+  comment = "Migadu DMARC policy"
+}
+
+# Mail client autodiscovery
+resource "cloudflare_record" "tbs_autoconfig" {
+  zone_id = var.tbs_zone_id
+  name    = "autoconfig"
+  type    = "CNAME"
+  content = "autoconfig.migadu.com"
+  proxied = false
+  comment = "Migadu autoconfig (Thunderbird etc)"
+}
+
+resource "cloudflare_record" "tbs_autodiscover" {
+  zone_id  = var.tbs_zone_id
+  name     = "_autodiscover._tcp"
+  type     = "SRV"
+  comment  = "Migadu autodiscover (Outlook)"
+
+  data {
+    priority = 0
+    weight   = 1
+    port     = 443
+    target   = "autodiscover.migadu.com"
+  }
+}
+
+resource "cloudflare_record" "tbs_submissions" {
+  zone_id  = var.tbs_zone_id
+  name     = "_submissions._tcp"
+  type     = "SRV"
+  comment  = "Migadu SMTP submission"
+
+  data {
+    priority = 0
+    weight   = 1
+    port     = 465
+    target   = "smtp.migadu.com"
+  }
+}
+
+resource "cloudflare_record" "tbs_imaps" {
+  zone_id  = var.tbs_zone_id
+  name     = "_imaps._tcp"
+  type     = "SRV"
+  comment  = "Migadu IMAP"
+
+  data {
+    priority = 0
+    weight   = 1
+    port     = 993
+    target   = "imap.migadu.com"
+  }
+}
+
+resource "cloudflare_record" "tbs_pop3s" {
+  zone_id  = var.tbs_zone_id
+  name     = "_pop3s._tcp"
+  type     = "SRV"
+  comment  = "Migadu POP3"
+
+  data {
+    priority = 0
+    weight   = 1
+    port     = 995
+    target   = "pop.migadu.com"
+  }
+}
