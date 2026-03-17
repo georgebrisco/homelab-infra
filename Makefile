@@ -10,7 +10,7 @@
 INVENTORY = -i scripts/terraform_inventory.py
 ANSIBLE   = ansible-playbook $(INVENTORY)
 
-.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant
+.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant dolphin tbs panoptes migadu
 
 help:
 	@echo "Terraform:"
@@ -35,6 +35,10 @@ help:
 	@echo "  make k3s            - k3s cluster provision"
 	@echo "  make k8s            - Apply k8s manifests"
 	@echo "  make all-services   - Deploy all service roles"
+	@echo "  make dolphin        - Dolphin app (React + cloudflared)"
+	@echo "  make tbs            - Tea Blend Studio (preview + production)"
+	@echo "  make panoptes       - Panoptes RTSP camera streaming"
+	@echo "  make migadu         - Migadu email (mailboxes, aliases, rewrites)"
 	@echo ""
 	@echo "Ops:"
 	@echo "  make backup         - Proxmox vzdump all containers"
@@ -100,7 +104,7 @@ homeassistant:
 gardener:
 	ansible-playbook -i scripts/terraform_inventory.py ansible-gardener/configure.yml
 
-all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns homeassistant gardener
+all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns homeassistant gardener dolphin tbs panoptes
 
 # --- Ops ---
 
@@ -109,3 +113,15 @@ backup:
 
 status:
 	@curl -s http://monitoring.homelab:9090/api/v1/targets | python3 -c "import json,sys; data=json.load(sys.stdin); [print(f\"  {t['labels'].get('instance','?'):30s} {t['health']}\") for t in data['data']['activeTargets']]" 2>/dev/null || echo "Cannot reach Prometheus"
+
+dolphin:
+	$(ANSIBLE) ansible-dolphin/configure.yml
+
+tbs:
+	$(ANSIBLE) ansible-tbs/configure.yml
+
+panoptes:
+	$(ANSIBLE) ansible-panoptes/configure.yml
+
+migadu:
+	ansible-playbook ansible-migadu/configure.yml
