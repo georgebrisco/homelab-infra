@@ -1,0 +1,16 @@
+---
+# Migadu email configuration for theteablendstudio.com
+# Manages mailboxes, aliases, and rewrites via the Migadu API.
+# Runs on localhost (manager) — no remote hosts needed.
+#
+# Usage:
+#   ansible-playbook ansible-migadu/configure.yml
+#
+- name: Configure Migadu email
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all/migadu_vault.yml
+  roles:
+    - migadu-mailboxes

@@ -1,0 +1,100 @@
+---
+# Migadu mailbox/alias/rewrite management via API
+# Ensures declared resources exist — does NOT delete extras or reset passwords.
+# Run from manager (localhost) since this calls the Migadu API directly.
+
+- name: Check existing mailboxes
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/mailboxes"
+    method: GET
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    return_content: true
+  register: existing_mailboxes
+
+- name: Extract existing mailbox local parts
+  ansible.builtin.set_fact:
+    existing_mailbox_parts: "{{ existing_mailboxes.json.mailboxes | map(attribute='local_part') | list }}"
+
+- name: Ensure mailboxes exist
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/mailboxes"
+    method: POST
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      local_part: "{{ item.local_part }}"
+      name: "{{ item.name }}"
+      password_method: invitation
+      password_recovery_email: "{{ migadu_admin_email }}"
+    status_code: [200]
+  loop: "{{ migadu_mailboxes }}"
+  when: item.local_part not in existing_mailbox_parts
+  loop_control:
+    label: "{{ item.local_part }}@{{ migadu_domain }}"
+
+- name: Check existing aliases
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/aliases"
+    method: GET
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    return_content: true
+  register: existing_aliases
+
+- name: Extract existing alias local parts
+  ansible.builtin.set_fact:
+    existing_alias_parts: "{{ existing_aliases.json.address_aliases | map(attribute='local_part') | list }}"
+
+- name: Ensure aliases exist
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/aliases"
+    method: POST
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      local_part: "{{ item.local_part }}"
+      destinations: "{{ item.destinations | join(,) }}"
+    status_code: [200]
+  loop: "{{ migadu_aliases }}"
+  when: item.local_part not in existing_alias_parts
+  loop_control:
+    label: "{{ item.local_part }}@{{ migadu_domain }}"
+
+- name: Check existing rewrites
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/rewrites"
+    method: GET
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    return_content: true
+  register: existing_rewrites
+
+- name: Extract existing rewrite names
+  ansible.builtin.set_fact:
+    existing_rewrite_names: "{{ existing_rewrites.json.rewrites | map(attribute='name') | list }}"
+
+- name: Ensure rewrites exist
+  ansible.builtin.uri:
+    url: "https://api.migadu.com/v1/domains/{{ migadu_domain }}/rewrites"
+    method: POST
+    url_username: "{{ migadu_admin_email }}"
+    url_password: "{{ migadu_api_key }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: "{{ item.name }}"
+      local_part_rule: "{{ item.local_part_rule }}"
+      destinations: "{{ item.destinations | join(,) }}"
+    status_code: [200]
+  loop: "{{ migadu_rewrites }}"
+  when: item.name not in existing_rewrite_names
+  loop_control:
+    label: "{{ item.name }}"

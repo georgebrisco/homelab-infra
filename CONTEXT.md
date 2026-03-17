@@ -83,6 +83,9 @@ homelab-infra/
 │   ├── configure.yml                # Tea Blend Studio on preview-site + production-site
 │   └── roles/tbs-web/{tasks,defaults}/
 ├── ansible-panoptes/
+├── ansible-migadu/
+│   ├── configure.yml                # Migadu mailboxes, aliases, rewrites via API
+│   └── roles/migadu-mailboxes/      # Idempotent Migadu API management
 │   ├── configure.yml                # RTSP camera streaming on panoptes
 │   └── roles/rtsp-camera/{tasks,defaults,templates,handlers}/
 ├── ansible-homeassistant/
@@ -220,6 +223,12 @@ Hosted email via Migadu (migadu.com). Low-volume (\~50 emails/week), 2–3 mailb
 **Terraform resources**: `tbs_migadu_verify`, `tbs_mx_primary`, `tbs_mx_secondary`, `tbs_spf`, `tbs_dkim_key1–3`, `tbs_dmarc`, `tbs_autoconfig`, `tbs_autodiscover`, `tbs_submissions`, `tbs_imaps`, `tbs_pop3s`
 
 **API key**: Stored in `group_vars/all/migadu_vault.yml` (ansible-vault encrypted). Variable: `migadu_api_key`.
+
+**Ansible role** (`migadu-mailboxes`):
+- Runs on localhost (calls Migadu API directly, no remote host needed)
+- Idempotent: checks existing state before creating anything, skips what already exists
+- Manages mailboxes, aliases, and rewrites declaratively via defaults
+- Usage: `ansible-playbook ansible-migadu/configure.yml`
 
 ## Panoptes Camera Streaming
 

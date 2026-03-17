@@ -1,0 +1,27 @@
+---
+migadu_domain: theteablendstudio.com
+migadu_admin_email: rosie@brisco.org.uk
+# migadu_api_key: from group_vars/all/migadu_vault.yml
+
+# Desired mailboxes (will NOT reset passwords on existing mailboxes)
+migadu_mailboxes:
+  - local_part: admin
+    name: Postmaster
+  - local_part: rosie
+    name: Roseanna Glynn
+
+# Aliases (same-domain forwarding)
+migadu_aliases:
+  - local_part: postmaster
+    destinations:
+      - admin@theteablendstudio.com
+  - local_part: info
+    destinations:
+      - rosie@theteablendstudio.com
+
+# Rewrites (pattern-based routing, e.g. catch-all)
+migadu_rewrites:
+  - name: catch-all
+    local_part_rule: "*"
+    destinations:
+      - rosie@theteablendstudio.com
