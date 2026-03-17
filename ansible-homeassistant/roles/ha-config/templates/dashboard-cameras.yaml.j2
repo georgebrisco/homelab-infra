@@ -1,0 +1,20 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+# Camera Dashboard — managed by Ansible
+# Source: ansible-homeassistant/roles/ha-config/templates/dashboard-cameras.yaml.j2
+
+title: Cameras
+views:
+  - title: Live Feeds
+    path: live
+    icon: mdi:cctv
+    type: sections
+    sections:
+
+      - title: Panoptes
+        type: grid
+        cards:
+          - type: picture-entity
+            entity: camera.panoptes
+            camera_view: live
+            show_state: false
+            show_name: true
