@@ -225,9 +225,25 @@ ha_wh51_sensors:
   - id: "0effd0"
     name: Unknown Plant
 
+# --- Tea Blend Studio website monitoring ---
+ha_tbs_sites:
+  - name: Preview
+    slug: tbs_preview
+    host_ip: "192.168.50.22"
+    public_url: "https://preview.theteablendstudio.com"
+    branch: master
+  - name: Production
+    slug: tbs_production
+    host_ip: "192.168.50.24"
+    public_url: "https://theteablendstudio.com"
+    branch: production
+
+ha_tbs_scan_interval: 120
+
 # --- HA restart method after config push ---
 # Options: "api" (call check-config then reload via REST API) or "none" (manual)
 ha_reload_method: api
 ha_api_url: "http://192.168.50.5:8123"
 # ha_api_token should be set in group_vars via Ansible Vault — see README
 # ha_api_token: ""
+

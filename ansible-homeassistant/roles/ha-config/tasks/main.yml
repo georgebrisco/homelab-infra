@@ -111,6 +111,21 @@
     backup: true
   notify: reload ha config
 
+- name: Deploy websites dashboard
+  template:
+    src: dashboard-websites.yaml.j2
+    dest: "{{ ha_config_dir }}/dashboards/websites.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
+
+- name: Deploy cameras dashboard
+  template:
+    src: dashboard-cameras.yaml.j2
+    dest: "{{ ha_config_dir }}/dashboards/cameras.yaml"
+    mode: "0644"
+    backup: true
+  notify: reload ha config
 
 # --- Empty placeholder files (managed in UI, preserved here) ---
 # scripts.yaml and scenes.yaml are primarily edited in the HA UI.

@@ -1,0 +1,89 @@
+#jinja2:variable_start_string:"[%", variable_end_string:"%]", block_start_string:"[#", block_end_string:"#]", comment_start_string:"[!", comment_end_string:"!]"
+[! Website status dashboard — managed by Ansible
+   Source: ansible-homeassistant/roles/ha-config/templates/dashboard-websites.yaml.j2
+!]
+title: Websites
+views:
+  - title: Websites
+    path: websites
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+[# for site in ha_tbs_sites #]
+          - type: markdown
+            content: "## [% site.name %] — [% site.public_url | replace('https://', '') %]"
+          - type: horizontal-stack
+            cards:
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_host
+                    state: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_host
+                  name: "Host"
+                  icon: mdi:server
+                  color: green
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_host
+                    state_not: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_host
+                  name: "Host"
+                  icon: mdi:server-off
+                  color: red
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_app
+                    state: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_app
+                  name: "App"
+                  icon: mdi:application-outline
+                  color: green
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_app
+                    state_not: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_app
+                  name: "App"
+                  icon: mdi:application-off-outline
+                  color: red
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_website
+                    state: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_website
+                  name: "Website"
+                  icon: mdi:web-check
+                  color: green
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: sensor.[% site.name | lower %]_website
+                    state_not: "up"
+                card:
+                  type: tile
+                  entity: sensor.[% site.name | lower %]_website
+                  name: "Website"
+                  icon: mdi:web-remove
+                  color: red
+              - type: tile
+                entity: sensor.[% site.name | lower %]_commit
+                name: "Live Commit"
+                icon: mdi:source-commit
+                color: cyan
+[# endfor #]

@@ -1,0 +1,37 @@
+# Managed by Ansible — do not edit manually
+# mediamtx configuration for rpicam-vid RTSP streaming
+
+###############################################
+# Global settings
+
+logLevel: info
+logDestinations: [stdout]
+
+###############################################
+# RTSP server
+
+rtspAddress: :{{ mediamtx_rtsp_port }}
+
+###############################################
+# WebRTC server (optional, for browser viewing)
+
+webrtcAddress: :{{ mediamtx_webrtc_port }}
+
+###############################################
+# HLS server (optional, for browser viewing)
+
+hlsAddress: :{{ mediamtx_hls_port }}
+
+###############################################
+# Path settings
+
+paths:
+  {{ camera_path_name }}:
+    source: rpiCamera
+    rpiCameraWidth: {{ camera_width }}
+    rpiCameraHeight: {{ camera_height }}
+    rpiCameraFPS: {{ camera_fps }}
+    rpiCameraBitrate: {{ camera_bitrate }}
+    rpiCameraCodec: auto
+    rpiCameraHFlip: {{ camera_hflip | default(false) | lower }}
+    rpiCameraVFlip: {{ camera_vflip | default(false) | lower }}

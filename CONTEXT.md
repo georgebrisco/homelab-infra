@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-13 (after gardener integration, all Phase 3 complete).
+> Last updated: 2026-03-17 (after panoptes camera streaming, HA cameras dashboard, TBS migration).
 
 ## Overview
 
@@ -9,7 +9,7 @@ Single Git repository managing a homelab running on one Proxmox VE host (`steam`
 
 **Manager node**: 192.168.50.28 (LXC container `manager`, CT 107). All Terraform and Ansible runs happen here. The repo lives at `/root/projects/homelab-infra`.
 
-**GitHub**: https://github.com/georgebrisco/homelab-infra (private). Push with `git push origin HEAD:main` (local branch is `master`, remote is `main`).
+**GitHub**: https://github.com/georgebrisco/homelab-infra (private). Push with `git push origin master` (both local and remote branch are `master`).
 
 ## Architecture Principles
 
@@ -28,55 +28,35 @@ Single Git repository managing a homelab running on one Proxmox VE host (`steam`
 - NFS: TrueNAS at 192.168.50.44 (physical, path `/mnt/MainPool/local_data/k8s`)
 - IoT subnet: 192.168.20.0/24 via static route to Linksys at 192.168.50.32
 
-## Git History
-
-```
-9216178 Gardener integration: rtl433 + moisture-proxy roles with shared MQTT config
-6b22533 Full monitoring coverage: node_exporter on all 21 hosts
-f287453 Deploy node_exporter to Proxmox host, fix backup NFS mkdir
-11e70d3 3.6 + 3.7: k8s manifest automation, backup strategy, Makefile
-cd33cb8 Add detailed README with architecture, usage, and DR guide
-c992cf7 3.5: Service roles + per-service Terraform role names
-dfe236f 3.4: Uptime Kuma deployment role
-2a5c854 3.9: lxc-prep derives container IDs from inventory group
-6fc57d1 3.8: Remove legacy ansible-k3s/inventory.ini
-04fbb4d Update CONTEXT.md with full roadmap (Phases 2-4)
-e90bf07 Update CONTEXT.md with Phase 3.2-3.3 progress
-f83849f Phase 3.3: Prometheus + Grafana monitoring stack role
-f7cbb49 Phase 3.2: node_exporter baseline + convention-over-config principle
-318a2b4 Rename tunnel resources to match container keys
-d449bc5 Phase 3.1: cloudflared deployment role
-a2fc04b Phase 3.0: Fix SSH access — deploy manager key to all containers
-e8c410a Add LLM context file for project continuity
-40999b6 Update AdGuard DNS credentials and push 22 hostname.homelab rewrites
-2604137 Phase 1: Single source of truth for inventory and state
-6385c78 Fix k3s provisioning for Proxmox LXC containers
-80bbb59 Initial commit: unified homelab infrastructure
-```
-
 ## File Tree
 
 ```
 homelab-infra/
-├── main.tf                          # Terraform: all 17 containers + 3 Cloudflare tunnels
+├── main.tf                          # Terraform: all 18 containers + 4 Cloudflare tunnels
 ├── outputs.tf                       # Terraform outputs consumed by Ansible
 ├── variables.tf                     # Terraform variable declarations
 ├── proxmox.auto.tfvars              # Proxmox connection, node, storage, SSH key
 ├── cloudflare.auto.tfvars           # Cloudflare account/zone IDs and domains
 ├── secrets.auto.tfvars              # [gitignored] passwords + cloudflare_api_token
 ├── secrets.auto.tfvars.example      # Template for secrets
-├── devices.yml                      # Non-Proxmox devices (steam, HA, TrueNAS, gardener, WAPs)
+├── devices.yml                      # Non-Proxmox devices (steam, HA, TrueNAS, gardener, panoptes, WAPs)
 ├── group_vars/
 │   └── all/
-│       └── mqtt.yml                 # Shared MQTT broker config (consumed via vars_files)
+│       ├── mqtt.yml                 # Shared MQTT broker config
+│       ├── homeassistant.yml        # HA non-secret overrides
+│       └── homeassistant_vault.yml  # [ansible-vault] HA API token
 ├── CONTEXT.md                       # This file
 ├── README.md                        # User-facing README with architecture + DR guide
 ├── Makefile                         # Convenience targets: make help for full list
+├── ansible.cfg                      # vault_password_file = .vault_pass
 ├── scripts/
 │   └── terraform_inventory.py       # Dynamic Ansible inventory (reads TF state + devices.yml)
 ├── ansible-common/
-│   ├── configure.yml                # node_exporter on all containers + physical devices
-│   └── roles/node-exporter/{tasks,handlers}/
+│   ├── configure.yml                # base-packages + node_exporter on all hosts
+│   └── roles/
+│       ├── base-packages/{tasks,templates}/  # vim, rsync, curl, unattended-upgrades
+│       ├── admin-user/{tasks}/               # Admin user + SSH key + sudoers
+│       └── node-exporter/{tasks,handlers}/   # Prometheus node_exporter :9100
 ├── ansible-tunnel/
 │   ├── configure.yml                # cloudflared on tunnel_hosts
 │   └── roles/cloudflared/tasks/
@@ -85,7 +65,7 @@ homelab-infra/
 │   └── roles/{prometheus,grafana}/{tasks,handlers,templates}/
 ├── ansible-uptime-kuma/
 │   ├── configure.yml                # Uptime Kuma on uptime_kuma_hosts
-│   └── roles/uptime-kuma/tasks/
+│   └── roles/uptime-kuma/{tasks,defaults,templates,handlers}/
 ├── ansible-immich/
 │   ├── configure.yml                # Immich (Docker Compose) on immich_hosts
 │   └── roles/immich/{tasks,templates,handlers,defaults}/
@@ -95,6 +75,24 @@ homelab-infra/
 ├── ansible-jupyter/
 │   ├── configure.yml                # Jupyter Notebook on jupyter_hosts
 │   └── roles/jupyter/{tasks,templates,handlers}/
+├── ansible-dolphin/
+│   ├── configure.yml                # Dolphin React app on dolphin_hosts
+│   └── roles/dolphin-web/{tasks,templates,handlers}/
+├── ansible-tbs/
+│   ├── configure.yml                # Tea Blend Studio on preview-site + production-site
+│   └── roles/tbs-web/{tasks,defaults}/
+├── ansible-panoptes/
+│   ├── configure.yml                # RTSP camera streaming on panoptes
+│   └── roles/rtsp-camera/{tasks,defaults,templates,handlers}/
+├── ansible-homeassistant/
+│   ├── configure.yml                # HA YAML config + add-ons + backup sync
+│   └── roles/
+│       ├── ha-config/{tasks,handlers,defaults,templates}/
+│       │   # templates: configuration.yaml.j2, automations.yaml.j2, secrets.yaml.j2
+│       │   #   sensors/extras.yaml.j2, sensors/rtl433_wh51.yaml.j2
+│       │   #   dashboard-{battery,cameras,climate,internet,moisture,websites}.yaml.j2
+│       ├── ha-addons/{tasks}/       # Supervisor API: install, configure, start add-ons
+│       └── ha-backup/{tasks}/       # Backup sync to TrueNAS + restore script
 ├── ansible-ocsirb-web/
 │   ├── configure.yml                # Nginx static sites on ocsirb_web_hosts
 │   └── roles/nginx-sites/{tasks,templates,handlers}/
@@ -108,9 +106,7 @@ homelab-infra/
 │   ├── configure.yml                # rtl433 + moisture-proxy on gardener_hosts
 │   └── roles/
 │       ├── rtl433/{tasks,templates,handlers,defaults}/
-│       │   # templates: rtl_433.conf.j2, rtl433.service.j2, logrotate.j2
 │       └── moisture-proxy/{tasks,templates,handlers,defaults}/
-│           # templates: moisture_proxy.py.j2, moisture_proxy.service.j2
 ├── ansible-dns/
 │   ├── configure.yml                # AdGuard DNS rewrites
 │   └── roles/adguard-dns/tasks/
@@ -134,7 +130,7 @@ homelab-infra/
     └── storage/pvc-portfolio-db.yaml
 ```
 
-## Containers (17 total)
+## Containers (18 total)
 
 All defined in `local.containers` in `main.tf`. Roles use per-service identity names (not categories).
 
@@ -142,7 +138,7 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 |-----|-------|----------|----|-------|---------|
 | adguard | 116 | adguard | .2 | dns | AdGuard Home DNS |
 | manager | 107 | manager | .28 | management | Terraform/Ansible control node |
-| devbox | 104 | devbox | .23 | development | Dev environment, NAS mounts |
+| devbox | 104 | devbox | .23 | development | Dev environment, bare git repos |
 | monitoring | 103 | monitoring | .25 | monitoring | Prometheus :9090 + Grafana :3000 |
 | uptime_kuma | 108 | uptime-kuma | .26 | uptime_kuma | Uptime Kuma :3001 |
 | omada | 109 | omada | .27 | omada | TP-Link Omada Controller :8043 |
@@ -152,8 +148,9 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 | immich | 111 | immich | .20 | immich | Immich :2283 (Docker Compose) |
 | ocsirb_web | 110 | ocsirb-web | .10 | ocsirb_web | Nginx: ocsirb :80 + React :8080 |
 | ocsirb_staging | 112 | ocsirb-staging | .13 | ocsirb_staging, tunnel | Nginx + cloudflared (staging.ocsirb.com) |
-| preview_site | 922 | preview-site | .22 | web, tunnel | Nginx + cloudflared (preview.theteablendstudio.com) |
-| production_site | 997 | production-site | .24 | web, tunnel | Nginx + cloudflared (theteablendstudio.com) |
+| dolphin | 117 | dolphin | .34 | dolphin, tunnel | React app + cloudflared (brisco.org.uk/marie) |
+| preview_site | 922 | preview-site | .22 | web, tunnel | PM2/serve + cloudflared (preview.theteablendstudio.com) |
+| production_site | 997 | production-site | .24 | web, tunnel | PM2/serve + cloudflared (theteablendstudio.com) |
 | k3s_server | 113 | k3s-server | .14 | k3s, k3s_server | k3s control plane |
 | k3s_agent_1 | 114 | k3s-agent-1 | .15 | k3s, k3s_agent | k3s worker |
 | k3s_agent_2 | 115 | k3s-agent-2 | .16 | k3s, k3s_agent | k3s worker |
@@ -165,9 +162,10 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 | Name | IP | MAC | User | Roles | Notes |
 |------|----|-----|------|-------|-------|
 | steam | .12 | 58:47:ca:77:85:fd | root | proxmox_host | Proxmox 8 hypervisor |
-| homeassistant | .11 | d8:3a:dd:cd:a8:b6 | hassio | iot, homeautomation | HA OS (s6 init, not systemd) |
+| homeassistant | .5 | d8:3a:dd:cd:a8:b4 | hassio | iot, homeautomation | HA Yellow, HAOS (s6 init) |
 | truenas | .44 | bc:24:11:00:35:85 | root | storage | Immutable /usr, node_exporter at /root/bin/ |
 | gardener | .53 | 2c:cf:67:81:f4:03 | root | iot, gardener | Raspberry Pi, USB SDR, rtl_433 + moisture_proxy |
+| panoptes | .61 | d8:3a:dd:f1:37:21 | root | rpi | Raspberry Pi 4B, Camera Module 3 (IMX708), RTSP streaming |
 
 **Non-managed** (get DHCP + DNS only):
 
@@ -178,10 +176,74 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 
 ### Physical Device Quirks
 
-- **HomeAssistant**: Uses `hassio` user (not root). Runs s6-svscan init (Alpine-based, not systemd). node_exporter deployed as s6 longrun service at `/etc/s6-overlay/s6-rc.d/node-exporter/`.
+- **HomeAssistant**: Uses `hassio` user (not root). Runs s6-svscan init (Alpine-based, not systemd). node_exporter deployed as s6 longrun service at `/etc/s6-overlay/s6-rc.d/node-exporter/`. HA version 2026.3.2. Config managed via `ansible-homeassistant` role (YAML templates + Supervisor API for add-ons). Generic camera integrations must be added via config flow API, not YAML (YAML `camera: platform: generic` removed in modern HA).
 - **TrueNAS**: Immutable `/usr` filesystem. node_exporter installed to `/root/bin/` instead of `/usr/local/bin/`.
 - **Steam (Proxmox)**: PVE firewall requires explicit port rules for node_exporter. Rule in `/etc/pve/local/host.fw`: `IN ACCEPT -source 192.168.50.0/24 -p tcp -dport 9100`.
 - **Gardener**: Raspberry Pi OS Bookworm (aarch64). USB RTL-SDR dongle. rtl_433 binary pre-compiled. Logrotate with `copytruncate` to handle open file handles. SD card — watch disk usage.
+- **Panoptes**: Raspberry Pi 4B, Debian 13 (Trixie), aarch64. WiFi only (wlan0). Pi Camera Module 3 (IMX708). Camera mounted upside-down (hflip + vflip enabled). mediamtx v1.16.3 streams 1080p30 H264. PipeWire may grab the camera if a desktop session starts — mediamtx service should be running first.
+
+## Tea Blend Studio (TBS) Deployment
+
+Website for theteablendstudio.com, a Vite/React SPA. Deployed from a bare git repo on devbox, built and served via PM2 + `serve -s dist -l 3000`.
+
+**Architecture**: Wife (Roseanna) pushes from her local machine → bare repo on devbox (`/srv/git/the-site.git`) → post-receive hook SSHes to manager → Ansible deploys to the target container.
+
+**Workflow**:
+- `git push origin master` → deploys to **preview-site** (CT 922, 192.168.50.22) → https://preview.theteablendstudio.com
+- `git push origin master:production` → deploys to **production-site** (CT 997, 192.168.50.24) → https://theteablendstudio.com
+
+**Post-receive hook** (`/srv/git/the-site.git/hooks/post-receive` on devbox):
+- Detects pushes to `refs/heads/master` and `refs/heads/production`
+- SSHes to manager and runs: `cd /root/projects/homelab-infra && ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml --limit <target> --skip-tags setup`
+- Also mirrors to GitHub in parallel
+
+**ansible-tbs role** (`tbs-web`):
+- Setup-tagged tasks: NodeSource LTS install, PM2 + serve globally, SSH keypair generation, devbox registration
+- Deploy tasks: git clone/pull, npm install, vite build, PM2 start/restart, PM2 save + startup
+- `tbs_git_version` variable controls which branch to check out (default: `master`, production override: `production`)
+
+## Panoptes Camera Streaming
+
+Raspberry Pi 4B with Pi Camera Module 3, streaming via mediamtx v1.16.3.
+
+**Streams available**:
+- RTSP: `rtsp://192.168.50.61:8554/cam` — for VLC, Home Assistant, Frigate
+- WebRTC: `http://192.168.50.61:8889/cam/` — low-latency browser viewing
+- HLS: `http://192.168.50.61:8888/cam/` — browser-compatible, higher latency
+
+**Home Assistant integration**: Camera added via config flow API (not YAML). Entity: `camera.panoptes`. Visible on the Cameras dashboard in the HA sidebar.
+
+**ansible-panoptes role** (`rtsp-camera`):
+- Installs rpicam-apps, creates mediamtx system user (in `video` group)
+- Downloads mediamtx binary from GitHub releases
+- Templates `mediamtx.yml` config (resolution, FPS, bitrate, codec, flip settings)
+- Systemd service: `/etc/systemd/system/mediamtx.service`
+- Defaults: 1920x1080, 30fps, 5Mbps, auto codec, hflip + vflip true (ceiling mount)
+
+## Home Assistant Configuration
+
+Fully Ansible-managed via `ansible-homeassistant`. Three roles:
+
+**ha-config**: Templates YAML configuration files and pushes to HA via SSH. Uses custom Jinja delimiters (`[% %]` for variables, `[# #]` for blocks) to avoid conflict with HA's native `{{ }}` templating. After deploying, validates config via HA API (`/api/config/core/check_config`) then reloads.
+
+**ha-addons**: Manages Supervisor add-ons via the Supervisor REST API — installs, configures, sets boot mode, starts.
+
+**ha-backup**: Syncs HA backups to TrueNAS, deploys restore and trigger scripts.
+
+**Dashboards** (YAML-mode, Ansible-managed, in sidebar):
+- Battery Status — all device batteries by category
+- Cameras — live RTSP feeds (panoptes)
+- Climate — HVAC, temperature sensors, outdoor temp, tides, AC delta-T
+- Internet — wired/WiFi ping RTT, packet loss, DNS resolution, jitter, uptime
+- Plant Moisture — WH51 soil sensor readings with staleness tracking
+- Websites — Tea Blend Studio preview/production status and version info
+
+**Key config entries** (in `ha-config/defaults/main.yml`):
+- HVAC scheduling with presence detection (near/far/home thresholds)
+- WH51 soil moisture sensors via MQTT (14 sensors, rtl_433 → moisture_proxy → HA)
+- Network monitoring via command_line sensors (ping, DNS, jitter, packet loss)
+- Template sensors: outdoor temp average, AC delta-T, HVAC target mode, internet uptime
+- Light groups, grow lamp automation, blind automation
 
 ## Gardener (192.168.50.53)
 
@@ -195,22 +257,11 @@ Raspberry Pi running two services that bridge RF sensors to Home Assistant via M
 
 ## Monitoring
 
-**22 Prometheus targets, all up** (17 containers + 4 physical devices + Prometheus self-scrape):
+**22+ Prometheus targets** (18 containers + 5 physical devices + Prometheus self-scrape):
 
 node_exporter (:9100) on all containers and physical devices. Prometheus scrape config is generated from inventory by the monitoring role — new hosts auto-appear when added to inventory and the monitoring role is re-run.
 
 **Grafana**: http://monitoring.homelab:3000
-
-## Dynamic Inventory Groups
-
-Generated by `scripts/terraform_inventory.py`:
-
-- **containers** → all 17 container hostnames (children: k3s_cluster, tunnel_hosts)
-- **physical_devices** → steam, homeassistant, truenas, gardener
-- **k3s_cluster** → k3s_server, k3s_agents
-- **tunnel_hosts** → ocsirb-staging, preview-site, production-site
-- **proxmox_host** → steam
-- Per-service groups: dns_hosts, management_hosts, development_hosts, monitoring_hosts, uptime_kuma_hosts, omada_hosts, photoprism_hosts, jupyter_hosts, inference_hosts, immich_hosts, ocsirb_web_hosts, ocsirb_staging_hosts, web_hosts, k3s_hosts, storage_hosts, iot_hosts, homeautomation_hosts, gardener_hosts
 
 ## Cloudflare Tunnels
 
@@ -219,6 +270,7 @@ Generated by `scripts/terraform_inventory.py`:
 | ocsirb_staging | ocsirb-staging (.13) | staging.ocsirb.com | http://localhost:80 |
 | preview_site | preview-site (.22) | preview.theteablendstudio.com | http://localhost:3000 |
 | production_site | production-site (.24) | theteablendstudio.com + www | http://localhost:3000 |
+| dolphin | dolphin (.34) | brisco.org.uk/marie | http://localhost:80 |
 
 Convention: tunnel resource name = container key → cloudflared token lookup is `tunnel_tokens[container_key]`.
 
@@ -229,6 +281,19 @@ Convention: tunnel resource name = container key → cloudflared token lookup is
 - Retention script at 03:30: 3 daily, 2 weekly, 1 monthly
 - Storage: TrueNAS NFS mount on the Proxmox host
 
+**Offsite backup**: Discussed but not yet implemented. Plan: Backblaze B2 + restic for Immich photos/DB, Terraform state/secrets, container configs. B2 pricing: free ingress, $6/TB/mo storage, free egress up to 3x stored amount.
+
+## Dynamic Inventory Groups
+
+Generated by `scripts/terraform_inventory.py`:
+
+- **containers** → all 18 container hostnames (children: k3s_cluster, tunnel_hosts)
+- **physical_devices** → steam, homeassistant, truenas, gardener, panoptes
+- **k3s_cluster** → k3s_server, k3s_agents
+- **tunnel_hosts** → ocsirb-staging, preview-site, production-site, dolphin
+- **proxmox_host** → steam
+- Per-service groups: dns_hosts, management_hosts, development_hosts, monitoring_hosts, uptime_kuma_hosts, omada_hosts, photoprism_hosts, jupyter_hosts, inference_hosts, immich_hosts, ocsirb_web_hosts, ocsirb_staging_hosts, dolphin_hosts, web_hosts, k3s_hosts, storage_hosts, iot_hosts, homeautomation_hosts, gardener_hosts, rpi_hosts
+
 ## Playbook Usage
 
 All playbooks run from `/root/projects/homelab-infra` on the manager. Use `make help` for full target list.
@@ -237,15 +302,21 @@ All playbooks run from `/root/projects/homelab-infra` on the manager. Use `make 
 # Quick reference — most common operations:
 make plan                # Terraform plan
 make apply               # Terraform apply
-make common              # node_exporter on all hosts
+make common              # base-packages + node_exporter on all hosts
 make monitoring          # Prometheus + Grafana
 make gardener            # rtl433 + moisture-proxy on gardener Pi
+make homeassistant       # HA YAML config + add-ons + backup sync
 make all-services        # Deploy all service roles
 make backup              # Proxmox vzdump cron
 make status              # Show all Prometheus targets
 
 # Router (uses its own static inventory):
 make router              # DHCP + DNS + static routes
+
+# Roles not yet in Makefile (run manually):
+ansible-playbook -i scripts/terraform_inventory.py ansible-dolphin/configure.yml
+ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml
+ansible-playbook -i scripts/terraform_inventory.py ansible-panoptes/configure.yml
 ```
 
 ## Secrets (gitignored)
@@ -253,15 +324,27 @@ make router              # DHCP + DNS + static routes
 | File | Contents |
 |------|----------|
 | secrets.auto.tfvars | proxmox_password, container_root_password, cloudflare_api_token |
+| .vault_pass | Ansible vault password (referenced by ansible.cfg) |
+| group_vars/all/homeassistant_vault.yml | ha_api_token (ansible-vault encrypted) |
 | ansible-router/group_vars/all/secrets.yml | omada_username, omada_password |
 | ansible-k3s/group_vars/all/vault.yml | proxmox_password, ansible_ssh_pass |
-| group_vars/all/mqtt.yml | mqtt_user, mqtt_pass (**not gitignored — should be**) |
 
-All Proxmox/container/Omada credentials currently use the same password. Phase 2 will address rotation and ansible-vault.
+**Known plaintext credentials** (technical debt):
+| File | Contents |
+|------|----------|
+| group_vars/all/mqtt.yml | mqtt_user, mqtt_pass (committed, should be vaulted) |
+| ansible-dns/configure.yml | adguard_user, adguard_password (inline) |
+| Monitoring role defaults | Grafana admin credentials (inline) |
 
-## SSH Key
+## SSH Access
 
-Manager key (deployed to all 17 containers + all 4 physical devices):
+From outside the homelab:
+```bash
+ssh -i ~/.ssh/homelab root@192.168.50.28   # → manager
+```
+From manager to any container or device: direct SSH as root (key pre-deployed).
+
+Manager key (deployed to all containers + all physical devices):
 ```
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp george@IvorTheEngine
 ```
@@ -270,20 +353,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6fA0xsXu+YMANF/JwmrfrzvRV7b7f8H6qWJF93hKLp
 
 ### Phase 3 — Reproducibility ✅ COMPLETE
 
-All items done:
-- 3.0: SSH key deployment to all containers + Proxmox host + HA + TrueNAS + gardener
-- 3.1: cloudflared role (convention-based: tunnel resource name = container key)
-- 3.2: node_exporter baseline on all hosts (22 targets, all up)
-- 3.3: Prometheus + Grafana monitoring stack (scrape targets from inventory)
-- 3.4: Uptime Kuma deployment role
-- 3.5: Service roles for all remaining containers (Immich, PhotoPrism, Jupyter, ocsirb-web, ocsirb-staging, Omada) + per-service Terraform role names
-- 3.6: k8s manifest apply playbook (apply-manifests.yml, dependency-ordered)
-- 3.7: Proxmox backup to TrueNAS (daily vzdump + retention: 3d/2w/1m)
-- 3.8: Deleted legacy ansible-k3s/inventory.ini
-- 3.9: lxc-prep role derives container IDs from inventory group
-- Gardener integration: rtl433 + moisture-proxy with shared MQTT config
-- Makefile with all operations
-- README with architecture + DR guide
+All items done: SSH key deployment, cloudflared role, node_exporter baseline (22+ targets), Prometheus + Grafana, Uptime Kuma, service roles for all containers, k8s manifest automation, Proxmox backup, legacy inventory cleanup, lxc-prep derives IDs from inventory, gardener integration, Makefile, README.
 
 ### Phase 2 — Security Hardening (deferred)
 
@@ -293,7 +363,6 @@ Orthogonal to Phase 3. The longer deferred, the more plaintext credentials accum
 - 2.2: ansible-vault encryption for all secrets files
 - 2.3: Move inline credentials (AdGuard, Grafana, MQTT) to vault files
 - 2.4: Proxmox API TLS (remove insecure=true)
-- 2.5: (Rejected) Remote Terraform backend — DR via git + known vm_ids
 
 ### Phase 4 — Maturity (future)
 
@@ -301,18 +370,15 @@ Orthogonal to Phase 3. The longer deferred, the more plaintext credentials accum
 - Auto-generated network diagram from inventory
 - Prometheus alertmanager (container down, disk full, high CPU)
 - Multi-host Proxmox support (add node field to locals map)
-- Router playbook: add gardener DHCP reservation + DNS entry (gardener.homelab)
+- Offsite backup with Backblaze B2 + restic
 
-## Known Issues / Technical Debt
+### Outstanding Items
 
-1. **MQTT credentials not gitignored**: `group_vars/all/mqtt.yml` contains MQTT password in plaintext and is committed. Should be encrypted or gitignored.
-2. **Password reuse**: Single password across Proxmox, containers, and Omada. Needs rotation + per-service passwords.
-3. **No encryption at rest**: secrets.auto.tfvars, vault.yml, mqtt.yml are plaintext. Should use ansible-vault and consider SOPS/age.
-4. **Proxmox API over HTTP with insecure=true**: Should configure TLS properly.
-5. **AdGuard credentials in plaintext**: adguard_user/password are inline in ansible-dns/configure.yml.
-6. **Grafana credentials in plaintext**: Inline in monitoring role defaults.
-7. **gardener not in DHCP reservations**: Router playbook hasn't been run to add gardener's reservation. Currently uses existing DHCP lease.
-8. **Prometheus scrape config needs re-run**: `make monitoring` needs to be run to pick up gardener as a scrape target (currently working because it was added manually or auto-discovered).
+- **Offsite backup** (3.7b): Backblaze B2 + restic role — discussed, approach agreed, not yet implemented
+- **AdGuard memory**: Currently 256MB, should be bumped to 512MB in locals.containers (apt installs cause high load)
+- **Makefile**: Missing targets for dolphin, tbs, panoptes
+- **Panoptes monitoring**: Add to Prometheus scrape targets (`make monitoring`)
+- **PipeWire conflict on panoptes**: Desktop sessions may grab the camera from mediamtx
 
 ## Provider Versions
 
@@ -320,10 +386,12 @@ Orthogonal to Phase 3. The longer deferred, the more plaintext credentials accum
 - bpg/proxmox: ~> 0.98
 - cloudflare/cloudflare: ~> 4.0
 - hashicorp/random: ~> 3.0
+- Home Assistant: 2026.3.2
 - AdGuard Home: v0.107.73
 - Prometheus: 2.53.4
 - Grafana: 12.4.1
 - node_exporter: 1.8.2
+- mediamtx: 1.16.3
 - cloudflared: latest
 - Immich: v2 (Docker)
 - Uptime Kuma: latest (GitHub)

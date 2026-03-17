@@ -1,0 +1,16 @@
+---
+mediamtx_version: "1.16.3"
+mediamtx_install_dir: /opt/mediamtx
+mediamtx_user: mediamtx
+mediamtx_rtsp_port: 8554
+mediamtx_webrtc_port: 8889
+mediamtx_hls_port: 8888
+
+# rpicam-vid settings
+camera_width: 1920
+camera_height: 1080
+camera_fps: 30
+camera_bitrate: 5000000
+camera_path_name: cam
+camera_hflip: true
+camera_vflip: true

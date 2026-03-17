@@ -1,0 +1,85 @@
+---
+# Install and configure mediamtx with rpicam-vid as an RTSP source
+#
+# Tags:
+#   setup — first-time provisioning (user, binary install)
+#   (untagged tasks always run)
+
+- name: Install rpicam-apps
+  apt:
+    name:
+      - rpicam-apps
+    state: present
+    update_cache: true
+  tags: [setup]
+
+- name: Create mediamtx system user
+  user:
+    name: "{{ mediamtx_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ mediamtx_install_dir }}"
+    create_home: false
+    groups: video
+    append: true
+  tags: [setup]
+
+- name: Create install directory
+  file:
+    path: "{{ mediamtx_install_dir }}"
+    state: directory
+    owner: "{{ mediamtx_user }}"
+    group: "{{ mediamtx_user }}"
+    mode: "0755"
+  tags: [setup]
+
+- name: Check installed mediamtx version
+  command: "{{ mediamtx_install_dir }}/mediamtx --version"
+  register: mediamtx_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Download mediamtx
+  get_url:
+    url: "https://github.com/bluenviron/mediamtx/releases/download/v{{ mediamtx_version }}/mediamtx_v{{ mediamtx_version }}_linux_arm64.tar.gz"
+    dest: /tmp/mediamtx.tar.gz
+    mode: "0644"
+  when: mediamtx_version_check.rc != 0 or mediamtx_version not in (mediamtx_version_check.stdout | default(''))
+
+- name: Extract mediamtx
+  unarchive:
+    src: /tmp/mediamtx.tar.gz
+    dest: "{{ mediamtx_install_dir }}"
+    remote_src: true
+    owner: "{{ mediamtx_user }}"
+    group: "{{ mediamtx_user }}"
+  when: mediamtx_version_check.rc != 0 or mediamtx_version not in (mediamtx_version_check.stdout | default(''))
+  notify: restart mediamtx
+
+- name: Deploy mediamtx configuration
+  template:
+    src: mediamtx.yml.j2
+    dest: "{{ mediamtx_install_dir }}/mediamtx.yml"
+    owner: "{{ mediamtx_user }}"
+    group: "{{ mediamtx_user }}"
+    mode: "0644"
+  notify: restart mediamtx
+
+- name: Deploy systemd service
+  template:
+    src: mediamtx.service.j2
+    dest: /etc/systemd/system/mediamtx.service
+    mode: "0644"
+  notify: restart mediamtx
+
+- name: Enable and start mediamtx
+  systemd:
+    name: mediamtx
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Clean up download
+  file:
+    path: /tmp/mediamtx.tar.gz
+    state: absent
