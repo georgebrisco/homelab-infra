@@ -1,0 +1,16 @@
+# Managed by Ansible — do not edit manually
+[Unit]
+Description=MediaMTX RTSP Server
+After=network.target
+
+[Service]
+Type=simple
+User={{ mediamtx_user }}
+Group=video
+ExecStart={{ mediamtx_install_dir }}/mediamtx {{ mediamtx_install_dir }}/mediamtx.yml
+Restart=always
+RestartSec=5
+WorkingDirectory={{ mediamtx_install_dir }}
+
+[Install]
+WantedBy=multi-user.target
