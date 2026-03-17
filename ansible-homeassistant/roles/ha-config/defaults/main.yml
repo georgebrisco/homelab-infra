@@ -246,3 +246,4 @@ ha_reload_method: api
 ha_api_url: "http://192.168.50.5:8123"
 # ha_api_token should be set in group_vars via Ansible Vault — see README
 # ha_api_token: ""
+

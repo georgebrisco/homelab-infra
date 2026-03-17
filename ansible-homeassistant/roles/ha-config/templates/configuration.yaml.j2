@@ -30,6 +30,7 @@ prometheus:
 
 # --- MQTT sensors (modern HA ≥2022.6 format) ---
 # WH51 soil sensors subscribe to moisture_proxy.py JSON topics.
+
 mqtt:
   sensor: !include_dir_merge_list mqtt_sensors
 
