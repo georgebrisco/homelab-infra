@@ -1,0 +1,14 @@
+---
+marina_watch_rtsp_url: "rtsp://192.168.50.61:8554/cam"
+marina_watch_model: "yolov8n.pt"
+marina_watch_confidence: "0.35"
+marina_watch_interval: "2.0"
+marina_watch_port: "8080"
+marina_watch_packages:
+  - libgl1
+  - libglib2.0-0
+  - python3-pip
+marina_watch_pip_packages:
+  - ultralytics
+  - opencv-python-headless
+  - flask

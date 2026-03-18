@@ -1,0 +1,10 @@
+[Unit]
+Description=Trigger daily timelapse capture before dawn
+
+[Timer]
+# Run at 4:00 AM daily — script calculates actual dawn and waits
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

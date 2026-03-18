@@ -1,0 +1,17 @@
+---
+# Deploy inference services
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-inference/configure.yml
+#
+#   # Skip first-time setup (redeploy config only):
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-inference/configure.yml --skip-tags setup
+
+- name: Deploy Marina Watch on inference VM
+  hosts: inference_hosts
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: marina-watch

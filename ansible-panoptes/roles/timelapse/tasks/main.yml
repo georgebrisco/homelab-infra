@@ -1,0 +1,80 @@
+---
+# Timelapse capture role for panoptes
+# Captures frames from dawn to dusk+1hr, stitches into daily MP4 on TrueNAS.
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - nfs-common
+      - ffmpeg
+      - python3-pip
+    state: present
+  tags: [setup]
+
+- name: Install astral python package
+  ansible.builtin.pip:
+    name: astral
+    state: present
+    break_system_packages: true
+  tags: [setup]
+
+- name: Create NFS mount parent directory
+  ansible.builtin.file:
+    path: "{{ timelapse_nfs_mount | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Create NFS mount point
+  ansible.builtin.command:
+    cmd: "mkdir -p {{ timelapse_nfs_mount }}"
+    creates: "{{ timelapse_nfs_mount }}"
+
+- name: Mount TrueNAS NFS share
+  ansible.posix.mount:
+    src: "{{ timelapse_nfs_server }}:{{ timelapse_nfs_path }}"
+    path: "{{ timelapse_nfs_mount }}"
+    fstype: nfs
+    opts: defaults,noatime
+    state: mounted
+
+- name: Create timelapse output directory
+  ansible.builtin.command:
+    cmd: "mkdir -p {{ timelapse_output_dir }}"
+    creates: "{{ timelapse_output_dir }}"
+
+- name: Deploy timelapse capture script
+  ansible.builtin.copy:
+    src: timelapse_capture.py
+    dest: /opt/timelapse_capture.py
+    mode: "0755"
+  notify: restart timelapse
+
+- name: Deploy timelapse environment file
+  ansible.builtin.template:
+    src: timelapse.env.j2
+    dest: /etc/default/timelapse
+    mode: "0644"
+  notify: restart timelapse
+
+- name: Deploy timelapse systemd service
+  ansible.builtin.template:
+    src: timelapse.service.j2
+    dest: /etc/systemd/system/timelapse.service
+    mode: "0644"
+  notify: restart timelapse
+
+- name: Deploy timelapse systemd timer
+  ansible.builtin.template:
+    src: timelapse.timer.j2
+    dest: /etc/systemd/system/timelapse.timer
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart timelapse timer
+
+- name: Enable and start timelapse timer
+  ansible.builtin.systemd:
+    name: timelapse.timer
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -8,10 +8,11 @@
 #   # Skip first-time setup (redeploy config only):
 #   ansible-playbook -i scripts/terraform_inventory.py ansible-panoptes/configure.yml --skip-tags setup
 
-- name: Deploy RTSP camera streaming on panoptes
+- name: Deploy RTSP camera streaming and timelapse on panoptes
   hosts: panoptes
   gather_facts: true
   become: true
 
   roles:
     - role: rtsp-camera
+    - role: timelapse

@@ -1,0 +1,15 @@
+---
+- name: reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: restart timelapse
+  ansible.builtin.systemd:
+    name: timelapse.service
+    state: restarted
+  failed_when: false
+
+- name: restart timelapse timer
+  ansible.builtin.systemd:
+    name: timelapse.timer
+    state: restarted

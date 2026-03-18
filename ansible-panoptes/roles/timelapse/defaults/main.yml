@@ -1,0 +1,13 @@
+---
+timelapse_latitude: "38.98"
+timelapse_longitude: "-76.49"
+timelapse_timezone: "America/New_York"
+timelapse_location: "Marina"
+timelapse_rtsp_url: "rtsp://127.0.0.1:8554/cam"
+timelapse_interval: "30"
+timelapse_fps: "30"
+timelapse_frame_dir: "/tmp/timelapse_frames"
+timelapse_output_dir: "/mnt/truenas/media/timelapse"
+timelapse_nfs_server: "192.168.50.44"
+timelapse_nfs_path: "/mnt/MainPool/local_data"
+timelapse_nfs_mount: "/mnt/truenas/media"

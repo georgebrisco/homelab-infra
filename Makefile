@@ -10,7 +10,7 @@
 INVENTORY = -i scripts/terraform_inventory.py
 ANSIBLE   = ansible-playbook $(INVENTORY)
 
-.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant dolphin tbs panoptes migadu
+.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant dolphin tbs panoptes migadu inference
 
 help:
 	@echo "Terraform:"
@@ -39,6 +39,7 @@ help:
 	@echo "  make tbs            - Tea Blend Studio (preview + production)"
 	@echo "  make panoptes       - Panoptes RTSP camera streaming"
 	@echo "  make migadu         - Migadu email (mailboxes, aliases, rewrites)"
+	@echo "  make inference      - Marina Watch (YOLO detection dashboard)"
 	@echo ""
 	@echo "Ops:"
 	@echo "  make backup         - Proxmox vzdump all containers"
@@ -125,3 +126,6 @@ panoptes:
 
 migadu:
 	ansible-playbook ansible-migadu/configure.yml
+
+inference:
+	$(ANSIBLE) ansible-inference/configure.yml

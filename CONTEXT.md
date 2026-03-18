@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-17 (after Migadu email setup for theteablendstudio.com).
+> Last updated: 2026-03-18 (after timelapse + Marina Watch inference demo).
 
 ## Overview
 
@@ -86,8 +86,12 @@ homelab-infra/
 ├── ansible-migadu/
 │   ├── configure.yml                # Migadu mailboxes, aliases, rewrites via API
 │   └── roles/migadu-mailboxes/      # Idempotent Migadu API management
-│   ├── configure.yml                # RTSP camera streaming on panoptes
-│   └── roles/rtsp-camera/{tasks,defaults,templates,handlers}/
+├── ansible-inference/
+│   ├── configure.yml                # Marina Watch YOLO detection dashboard
+│   └── roles/marina-watch/          # YOLOv8 + Flask on inference VM
+├── ansible-panoptes/
+│   ├── configure.yml                # RTSP camera streaming + timelapse on panoptes
+│   └── roles/{rtsp-camera,timelapse}/
 ├── ansible-homeassistant/
 │   ├── configure.yml                # HA YAML config + add-ons + backup sync
 │   └── roles/
@@ -248,6 +252,34 @@ Raspberry Pi 4B with Pi Camera Module 3, streaming via mediamtx v1.16.3.
 - Systemd service: `/etc/systemd/system/mediamtx.service`
 - Defaults: 1920x1080, 30fps, 5Mbps, auto codec, hflip + vflip true (ceiling mount)
 
+### Timelapse
+
+Daily timelapse capture from civil dawn to sunset + 1 hour. Frames captured every 30 seconds
+via ffmpeg from the local RTSP stream, then stitched into an MP4 and stored on TrueNAS NFS.
+
+**Ansible role** (`timelapse`, part of `ansible-panoptes`):
+- NFS mount: `192.168.50.44:/mnt/MainPool/local_data` → `/mnt/truenas/media`
+- Output: `/mnt/truenas/media/timelapse/timelapse_YYYY-MM-DD.mp4`
+- Sunrise/sunset: `astral` library, configured for lat 38.98 / lon -76.49
+- Systemd: `timelapse.timer` triggers at 04:00, script sleeps until dawn
+- ~1,600 frames/day → ~54s timelapse at 30fps
+
+## Marina Watch (Inference Demo)
+
+Real-time YOLOv8 object detection on the panoptes camera feed, running on the inference VM
+(CT 106, 8GB RAM, CPU-only). Serves a live web dashboard at `http://inference.homelab:8080`
+with annotated MJPEG video, detection counts, and activity log.
+
+**Architecture**: inference VM pulls RTSP frames from panoptes → YOLOv8n inference (CPU) →
+annotated MJPEG stream + Flask web dashboard. ~20fps inference on YOLOv8 nano model.
+
+**Detected classes**: 80 COCO classes (boats, people, birds, vehicles, etc.)
+
+**Ansible role** (`marina-watch`, in `ansible-inference`):
+- Dependencies: ultralytics, opencv-python-headless, flask, libgl1
+- Systemd: `marina-watch.service` with env vars for RTSP URL, model, confidence, port
+- Dashboard: `http://inference.homelab:8080`
+
 ## Home Assistant Configuration
 
 Fully Ansible-managed via `ansible-homeassistant`. Three roles:
@@ -341,10 +373,12 @@ make status              # Show all Prometheus targets
 # Router (uses its own static inventory):
 make router              # DHCP + DNS + static routes
 
-# Roles not yet in Makefile (run manually):
-ansible-playbook -i scripts/terraform_inventory.py ansible-dolphin/configure.yml
-ansible-playbook -i scripts/terraform_inventory.py ansible-tbs/configure.yml
-ansible-playbook -i scripts/terraform_inventory.py ansible-panoptes/configure.yml
+# Additional service targets:
+make dolphin              # Dolphin app (React + cloudflared)
+make tbs                  # Tea Blend Studio (preview + production)
+make panoptes             # RTSP camera + timelapse
+make migadu               # Migadu email config
+make inference            # Marina Watch (YOLO detection dashboard)
 ```
 
 ## Secrets (gitignored)
@@ -405,7 +439,7 @@ Orthogonal to Phase 3. The longer deferred, the more plaintext credentials accum
 
 - **Offsite backup** (3.7b): Backblaze B2 + restic role — discussed, approach agreed, not yet implemented
 - **AdGuard memory**: Currently 256MB, should be bumped to 512MB in locals.containers (apt installs cause high load)
-- **Makefile**: Missing targets for dolphin, tbs, panoptes
+- **Makefile**: All service targets now present (dolphin, tbs, panoptes, migadu, inference added)
 - **Panoptes monitoring**: Add to Prometheus scrape targets (`make monitoring`)
 - **PipeWire conflict on panoptes**: Desktop sessions may grab the camera from mediamtx
 

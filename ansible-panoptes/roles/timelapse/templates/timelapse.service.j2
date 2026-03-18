@@ -1,0 +1,16 @@
+[Unit]
+Description=Daily timelapse capture (dawn to dusk+1hr)
+After=network-online.target mediamtx.service
+Wants=network-online.target
+Requires=mediamtx.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/timelapse
+ExecStart=/usr/bin/python3 /opt/timelapse_capture.py
+TimeoutStopSec=30
+# Allow long runs (full day capture)
+TimeoutStartSec=86400
+
+[Install]
+WantedBy=multi-user.target

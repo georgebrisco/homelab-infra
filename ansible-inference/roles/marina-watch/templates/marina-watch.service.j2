@@ -1,0 +1,18 @@
+[Unit]
+Description=Marina Watch — YOLO object detection dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/marina_watch.py
+Environment=MARINA_RTSP_URL={{ marina_watch_rtsp_url }}
+Environment=MARINA_MODEL={{ marina_watch_model }}
+Environment=MARINA_CONFIDENCE={{ marina_watch_confidence }}
+Environment=MARINA_INTERVAL={{ marina_watch_interval }}
+Environment=MARINA_PORT={{ marina_watch_port }}
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
