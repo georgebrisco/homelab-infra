@@ -1,6 +1,14 @@
 ---
 tbs_git_repo: "root@192.168.50.23:/srv/git/the-site.git"
 tbs_app_dir: /srv/website
-tbs_app_name: website
+tbs_app_name: tea-blend-studio
 tbs_port: 3000
+tbs_api_port: 3001
 tbs_git_version: master
+
+# Domain — used in Nginx config and FRONTEND_URL
+# Override per-host in the playbook
+tbs_domain: "theteablendstudio.com"
+
+# SMTP credentials — from group_vars/all/migadu_vault.yml
+# tbs_smtp_host, tbs_smtp_port, tbs_smtp_user, tbs_smtp_pass, tbs_fulfilment_email

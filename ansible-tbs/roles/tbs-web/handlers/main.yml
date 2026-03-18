@@ -1,0 +1,11 @@
+---
+- name: reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+
+- name: restart api
+  ansible.builtin.shell: |
+    pm2 describe {{ tbs_app_name }}-api > /dev/null 2>&1 \
+      && pm2 restart {{ tbs_app_name }}-api \
+      || true

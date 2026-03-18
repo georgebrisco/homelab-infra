@@ -21,15 +21,21 @@
 - name: Deploy Tea Blend Studio (preview)
   hosts: preview-site
   gather_facts: true
+  vars_files:
+    - ../group_vars/all/migadu_vault.yml
   vars:
     tbs_git_version: master
+    tbs_domain: "preview.theteablendstudio.com"
   roles:
     - role: tbs-web
 
 - name: Deploy Tea Blend Studio (production)
   hosts: production-site
   gather_facts: true
+  vars_files:
+    - ../group_vars/all/migadu_vault.yml
   vars:
     tbs_git_version: production
+    tbs_domain: "theteablendstudio.com"
   roles:
     - role: tbs-web
