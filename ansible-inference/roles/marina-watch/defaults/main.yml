@@ -1,8 +1,9 @@
 ---
 marina_watch_rtsp_url: "rtsp://192.168.50.61:8554/cam"
-marina_watch_model: "yolov8n.pt"
+marina_watch_model: "rfdetr-base"
 marina_watch_confidence: "0.35"
 marina_watch_interval: "2.0"
+marina_watch_imgsz: "0"
 marina_watch_port: "8080"
 marina_watch_packages:
   - libgl1
@@ -12,3 +13,4 @@ marina_watch_pip_packages:
   - ultralytics
   - opencv-python-headless
   - flask
+  - rfdetr
