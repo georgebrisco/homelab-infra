@@ -1,7 +1,7 @@
 # homelab-infra — Project Context
 
 > Feed this file to an LLM to resume work on this project.
-> Last updated: 2026-03-18 (after timelapse + Marina Watch inference demo).
+> Last updated: 2026-03-18 (after TBS Nginx/Express backend, timelapse, Marina Watch).
 
 ## Overview
 
@@ -81,7 +81,7 @@ homelab-infra/
 │   └── roles/dolphin-web/{tasks,templates,handlers}/
 ├── ansible-tbs/
 │   ├── configure.yml                # Tea Blend Studio on preview-site + production-site
-│   └── roles/tbs-web/{tasks,defaults}/
+│   └── roles/tbs-web/{tasks,defaults,templates,handlers}/
 ├── ansible-panoptes/
 ├── ansible-migadu/
 │   ├── configure.yml                # Migadu mailboxes, aliases, rewrites via API
@@ -157,8 +157,8 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 | ocsirb_web | 110 | ocsirb-web | .10 | ocsirb_web | Nginx: ocsirb :80 + React :8080 |
 | ocsirb_staging | 112 | ocsirb-staging | .13 | ocsirb_staging, tunnel | Nginx + cloudflared (staging.ocsirb.com) |
 | dolphin | 117 | dolphin | .34 | dolphin, tunnel | React app + cloudflared (brisco.org.uk/marie) |
-| preview_site | 922 | preview-site | .22 | web, tunnel | PM2/serve + cloudflared (preview.theteablendstudio.com) |
-| production_site | 997 | production-site | .24 | web, tunnel | PM2/serve + cloudflared (theteablendstudio.com) |
+| preview_site | 922 | preview-site | .22 | web, tunnel | Nginx + Express API + cloudflared (preview.theteablendstudio.com) |
+| production_site | 997 | production-site | .24 | web, tunnel | Nginx + Express API + cloudflared (theteablendstudio.com) |
 | k3s_server | 113 | k3s-server | .14 | k3s, k3s_server | k3s control plane |
 | k3s_agent_1 | 114 | k3s-agent-1 | .15 | k3s, k3s_agent | k3s worker |
 | k3s_agent_2 | 115 | k3s-agent-2 | .16 | k3s, k3s_agent | k3s worker |
@@ -192,7 +192,7 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 
 ## Tea Blend Studio (TBS) Deployment
 
-Website for theteablendstudio.com, a Vite/React SPA. Deployed from a bare git repo on devbox, built and served via PM2 + `serve -s dist -l 3000`.
+Website for theteablendstudio.com, a Vite/React SPA with a Node.js/Express backend for order emails. Frontend served by Nginx (static `dist/`), API server on port 3001 managed by PM2. Nginx proxies `/api/` requests to Express. Order emails sent via Migadu SMTP (`orders@theteablendstudio.com`).
 
 **Architecture**: Wife (Roseanna) pushes from her local machine → bare repo on devbox (`/srv/git/the-site.git`) → post-receive hook SSHes to manager → Ansible deploys to the target container.
 
@@ -206,9 +206,12 @@ Website for theteablendstudio.com, a Vite/React SPA. Deployed from a bare git re
 - Also mirrors to GitHub in parallel
 
 **ansible-tbs role** (`tbs-web`):
-- Setup-tagged tasks: NodeSource LTS install, PM2 + serve globally, SSH keypair generation, devbox registration
-- Deploy tasks: git clone/pull, npm install, vite build, PM2 start/restart, PM2 save + startup
+- Setup-tagged tasks: NodeSource LTS install, Nginx, PM2 globally, SSH keypair generation, devbox registration
+- Deploy tasks: git clone/pull, npm install, vite build, deploy `.env` (SMTP creds from vault), Nginx config, PM2 start Express API
+- Nginx serves `dist/` on port 80, proxies `/api/` to Express on port 3001
+- `.env` template: SMTP_HOST/PORT/USER/PASS, FULFILMENT_EMAIL, SERVER_PORT, FRONTEND_URL (all from `migadu_vault.yml`)
 - `tbs_git_version` variable controls which branch to check out (default: `master`, production override: `production`)
+- `tbs_domain` variable controls Nginx server_name and FRONTEND_URL (preview vs production)
 
 ## Migadu Email (theteablendstudio.com)
 
