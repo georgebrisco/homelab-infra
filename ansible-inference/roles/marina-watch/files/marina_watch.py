@@ -25,8 +25,8 @@ from ultralytics import YOLO
 # --- Configuration ---
 RTSP_URL = os.environ.get('MARINA_RTSP_URL', 'rtsp://192.168.50.61:8554/cam')
 MODEL_SIZE = os.environ.get('MARINA_MODEL', 'yolov8l')  # nano for CPU
-CONFIDENCE = float(os.environ.get('MARINA_CONFIDENCE', '0.35'))
-INFERENCE_INTERVAL = float(os.environ.get('MARINA_INTERVAL', '3.0'))  # seconds between inferences
+CONFIDENCE = float(os.environ.get('MARINA_CONFIDENCE', '0.25'))
+INFERENCE_INTERVAL = float(os.environ.get('MARINA_INTERVAL', '2.0'))  # seconds between inferences
 WEB_PORT = int(os.environ.get('MARINA_PORT', '8080'))
 
 # Classes of interest for a marina scene
