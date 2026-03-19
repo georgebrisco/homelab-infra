@@ -38,7 +38,7 @@ locals {
   dns_servers_adguard = ["1.1.1.1", "8.8.8.8"]
 
   # OS templates
-  ubuntu_template = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+  ubuntu_template = "local:vztmpl/ubuntu-25.04-standard_25.04-1.1_amd64.tar.zst"
   debian_template = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
 
   containers = {
@@ -409,6 +409,26 @@ locals {
       console      = false
       dns          = local.dns_servers_default
       roles        = ["dolphin", "tunnel"]
+    }
+    openclaw = {
+      vm_id       = 118
+      hostname    = "openclaw"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 2
+      memory      = 4096
+      swap        = 2048
+      disk_gb     = 20
+      reserved_ip = "192.168.50.35"
+      mac         = "bc:24:11:32:e5:c1"
+      static      = false
+      privileged  = false
+      tags        = []
+      mounts      = []
+      firewall    = true
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["openclaw"]
     }
   }
 

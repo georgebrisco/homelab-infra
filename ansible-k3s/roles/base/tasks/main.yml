@@ -47,6 +47,7 @@
       - gnupg
       - lsb-release
       - open-iscsi
+      - vim
     state: present
 
 - name: Set timezone to UTC
