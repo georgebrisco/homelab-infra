@@ -1,216 +1,309 @@
-<svelte:head>
-	<title>Services — Florida AI</title>
-	<meta name="description" content="AI consulting services for small businesses. From free audits to fully managed AI workstations." />
-</svelte:head>
+<script>
+  import { fadeIn } from '$lib/actions/fadeIn.js';
 
-<section class="page-hero">
-	<div class="container">
-		<h1>Services</h1>
-		<p class="subtitle">Practical AI help, tailored to your business. No jargon, no hype.</p>
-	</div>
-</section>
+  let expandedService = $state(null);
+</script>
 
 <section class="section">
-	<div class="container">
-		<div class="service-detail">
-			<div class="service-header">
-				<span class="service-badge free">Free</span>
-				<h2>AI Kickstart — Free Audit</h2>
-			</div>
-			<div class="service-body">
-				<p>This is where it all begins. We come to your office for 45 minutes, learn about
-				   your day-to-day work, and give you a live demonstration of what AI can do with your
-				   actual tasks. We'll bring a laptop and work through real examples — a customer email
-				   you need to reply to, an invoice query, a report you need to write.</p>
-				<p>There's no commitment, no hard sell, and no slides. Just a practical conversation
-				   about where AI could save you time and money.</p>
-				<h4>What you get:</h4>
-				<ul>
-					<li>45-minute on-site visit</li>
-					<li>Assessment of your current workflows</li>
-					<li>Live demonstration using your real business tasks</li>
-					<li>Honest advice on where AI can (and can't) help</li>
-					<li>Written summary of recommendations</li>
-				</ul>
-			</div>
-		</div>
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h1 class="fade-in">Our Services</h1>
+      <p class="fade-in text-muted">Comprehensive AI solutions tailored to your business needs</p>
+    </div>
 
-		<div class="service-detail">
-			<div class="service-header">
-				<span class="service-badge popular">Most Popular</span>
-				<h2>AI Ready — Setup &amp; Training <span class="price">$450</span></h2>
-			</div>
-			<div class="service-body">
-				<p>A half-day session where we set up AI tools on your existing machines, configure
-				   them for your specific business needs, and train your team to use them confidently.
-				   We build custom templates and workflows so your staff can start being productive
-				   with AI from day one.</p>
-				<p>We work with leading AI platforms including Claude, ChatGPT, and open-source
-				   alternatives. We'll recommend the right tools for your needs and budget, and
-				   we're not tied to any single provider.</p>
-				<h4>What you get:</h4>
-				<ul>
-					<li>Half-day on-site setup and training session</li>
-					<li>AI tools configured for your business workflows</li>
-					<li>Custom prompt templates for your common tasks</li>
-					<li>Hands-on training for your team with real scenarios</li>
-					<li>Quick-reference guide for your staff</li>
-					<li>One week of email follow-up support</li>
-				</ul>
-			</div>
-		</div>
+    <div class="grid grid-3">
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 0 ? null : 0} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 6V2m0 20v-4m10-4h-4m-12 0H2m17-7l2.828-2.828M4.172 4.172L7 7m10 10l2.828 2.828M4.172 19.828L7 17"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </div>
+        <h3>Process Automation</h3>
+        <p>Eliminate manual tasks and streamline workflows with intelligent automation.</p>
+        {#if expandedService === 0}
+          <div class="service-details">
+            <ul>
+              <li>RPA implementation</li>
+              <li>Workflow optimization</li>
+              <li>Data entry automation</li>
+              <li>Document processing</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
 
-		<div class="service-detail">
-			<div class="service-header">
-				<span class="service-badge premium">Premium</span>
-				<h2>AI Powerhouse — Dedicated Workstation <span class="price">$1,200</span></h2>
-			</div>
-			<div class="service-body">
-				<p>For businesses that want maximum privacy or handle sensitive data, we supply and
-				   install a dedicated AI workstation. This is a clean, pre-configured machine that
-				   gives you a professional AI environment — your own assistant that lives in your
-				   office, accessible via the messaging apps your team already uses.</p>
-				<p>The workstation comes fully configured and tested. We handle the hardware
-				   sourcing, setup, and installation so you don't have to think about the
-				   technical details. It includes everything from the AI Ready package plus
-				   the hardware itself.</p>
-				<h4>What you get:</h4>
-				<ul>
-					<li>Everything in AI Ready</li>
-					<li>Dedicated, pre-configured AI workstation</li>
-					<li>AI assistant accessible via WhatsApp, Slack, or Teams</li>
-					<li>Enhanced privacy — your data stays on your premises</li>
-					<li>Professional installation and full testing</li>
-					<li>Hardware warranty and maintenance support</li>
-				</ul>
-			</div>
-		</div>
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 1 ? null : 1} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+            <circle cx="9" cy="10" r="1"></circle>
+            <circle cx="12" cy="10" r="1"></circle>
+            <circle cx="15" cy="10" r="1"></circle>
+          </svg>
+        </div>
+        <h3>AI Chatbots</h3>
+        <p>Intelligent conversational AI to enhance customer support and engagement.</p>
+        {#if expandedService === 1}
+          <div class="service-details">
+            <ul>
+              <li>Customer service chatbots</li>
+              <li>Lead qualification</li>
+              <li>24/7 availability</li>
+              <li>Multi-language support</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
 
-		<div class="service-detail retainer-detail">
-			<div class="service-header">
-				<h2>Monthly Retainer <span class="price">$500/month</span></h2>
-			</div>
-			<div class="service-body">
-				<p>AI tools change fast. New capabilities appear, models improve, and your business
-				   needs evolve. Our monthly retainer keeps you ahead of the curve with dedicated
-				   support hours, regular check-ins, and ongoing template updates.</p>
-				<h4>What's included:</h4>
-				<ul>
-					<li>Two hours of dedicated support per month</li>
-					<li>Monthly check-in visit or video call</li>
-					<li>Template and workflow updates as AI capabilities evolve</li>
-					<li>Priority email and phone support</li>
-					<li>"What's new in AI" briefing relevant to your business</li>
-					<li>Additional day-rate work available for retainer clients</li>
-				</ul>
-			</div>
-		</div>
-	</div>
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 2 ? null : 2} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 3h18v18H3z"></path>
+            <path d="M3 9h18M9 9v12M15 9v12"></path>
+          </svg>
+        </div>
+        <h3>Data Analytics</h3>
+        <p>Transform raw data into actionable insights for better business decisions.</p>
+        {#if expandedService === 2}
+          <div class="service-details">
+            <ul>
+              <li>Predictive analytics</li>
+              <li>Custom dashboards</li>
+              <li>Data visualization</li>
+              <li>Business intelligence</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
+
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 3 ? null : 3} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 010 7.75"></path>
+          </svg>
+        </div>
+        <h3>Predictive Lead Scoring</h3>
+        <p>Identify and prioritize high-value leads using advanced machine learning.</p>
+        {#if expandedService === 3}
+          <div class="service-details">
+            <ul>
+              <li>Lead scoring models</li>
+              <li>Sales pipeline optimization</li>
+              <li>Conversion prediction</li>
+              <li>Customer lifetime value</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
+
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 4 ? null : 4} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 9v3m0 3v3m0-12a9 9 0 110 18 9 9 0 010-18z"></path>
+          </svg>
+        </div>
+        <h3>Computer Vision</h3>
+        <p>Leverage image recognition and analysis for quality control and insights.</p>
+        {#if expandedService === 4}
+          <div class="service-details">
+            <ul>
+              <li>Image recognition</li>
+              <li>Quality inspection</li>
+              <li>Object detection</li>
+              <li>Video analysis</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
+
+      <div class="service-card fade-in" use:fadeIn onclick={() => expandedService = expandedService === 5 ? null : 5} role="button" tabindex="0">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <h3>Custom AI Development</h3>
+        <p>Build proprietary AI models specifically designed for your unique challenges.</p>
+        {#if expandedService === 5}
+          <div class="service-details">
+            <ul>
+              <li>Model development</li>
+              <li>Training & optimization</li>
+              <li>Integration & deployment</li>
+              <li>Ongoing maintenance</li>
+            </ul>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
 </section>
 
-<section class="cta-section">
-	<div class="container text-center">
-		<h2>Not sure which service is right for you?</h2>
-		<p class="cta-text">Start with a free AI Audit. We'll help you figure out the best next step.</p>
-		<a href="/contact" class="btn btn-primary btn-lg">Book Your Free Audit</a>
-	</div>
+<section class="section section-dark">
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h2 class="fade-in">Why Choose Florida AI?</h2>
+      <p class="fade-in text-muted">What sets us apart</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="benefit-item fade-in" use:fadeIn>
+        <div class="benefit-check">✓</div>
+        <div>
+          <h3>Local Expertise</h3>
+          <p>We understand Florida's unique business landscape and challenges.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item fade-in" use:fadeIn>
+        <div class="benefit-check">✓</div>
+        <div>
+          <h3>Proven Track Record</h3>
+          <p>Over 120 successful implementations with measurable ROI.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item fade-in" use:fadeIn>
+        <div class="benefit-check">✓</div>
+        <div>
+          <h3>Dedicated Support</h3>
+          <p>Your success is our mission. We provide ongoing support and optimization.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item fade-in" use:fadeIn>
+        <div class="benefit-check">✓</div>
+        <div>
+          <h3>Transparent Pricing</h3>
+          <p>No hidden fees. You know exactly what you're paying for.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <style>
-	.page-hero {
-		padding: 3.5rem 0 2.5rem;
-		background: var(--color-primary-lighter);
-		text-align: center;
-	}
-	.page-hero h1 { margin-bottom: var(--space-sm); }
+  .service-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-slow);
+    border: 1px solid var(--neutral-100);
+    cursor: pointer;
+    position: relative;
+  }
 
-	.service-detail {
-		border: 1px solid var(--color-border);
-		border-radius: 12px;
-		overflow: hidden;
-		margin-bottom: var(--space-2xl);
-	}
-	.service-header {
-		background: var(--color-bg-alt);
-		padding: var(--space-xl) var(--space-2xl);
-		border-bottom: 1px solid var(--color-border);
-		display: flex;
-		align-items: center;
-		gap: var(--space-md);
-		flex-wrap: wrap;
-	}
-	.service-header h2 {
-		margin-bottom: 0;
-		flex: 1;
-	}
-	.price {
-		color: var(--color-accent);
-		font-size: 1.5rem;
-	}
-	.service-badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 20px;
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: white;
-	}
-	.service-badge.free { background: var(--color-primary-light); }
-	.service-badge.popular { background: var(--color-accent); }
-	.service-badge.premium { background: #805ad5; }
+  .service-card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-4px);
+  }
 
-	.service-body {
-		padding: var(--space-2xl);
-	}
-	.service-body p {
-		color: var(--color-text-light);
-		margin-bottom: var(--space-md);
-		max-width: 700px;
-	}
-	.service-body h4 {
-		color: var(--color-primary);
-		margin-top: var(--space-xl);
-		margin-bottom: var(--space-md);
-	}
-	.service-body ul {
-		list-style: none;
-		padding: 0;
-	}
-	.service-body li {
-		padding: var(--space-sm) 0;
-		padding-left: 1.5rem;
-		position: relative;
-		color: var(--color-text-light);
-	}
-	.service-body li::before {
-		content: '\2713';
-		position: absolute;
-		left: 0;
-		color: var(--color-accent);
-		font-weight: 700;
-	}
+  .service-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cta) 100%);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: var(--spacing-md);
+  }
 
-	.retainer-detail {
-		border-color: var(--color-primary-light);
-		border-width: 2px;
-	}
+  .service-icon svg {
+    width: 28px;
+    height: 28px;
+  }
 
-	.cta-section {
-		padding: var(--space-4xl) 0;
-		background: var(--color-primary);
-	}
-	.cta-section h2 { color: var(--color-text-inverse); }
-	.cta-text {
-		color: #cbd5e0;
-		max-width: 500px;
-		margin: 0 auto var(--space-2xl);
-	}
+  .service-card h3 {
+    margin-bottom: var(--spacing-md);
+  }
 
-	@media (max-width: 768px) {
-		.service-header {
-			padding: var(--space-lg);
-		}
-		.service-body {
-			padding: var(--space-lg);
-		}
-	}
+  .service-card p {
+    color: var(--neutral-600);
+    margin: 0;
+  }
+
+  .service-details {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--neutral-200);
+    animation: slideInDown 0.3s ease-out;
+  }
+
+  .service-details ul {
+    list-style: none;
+    margin: 0;
+  }
+
+  .service-details li {
+    padding: var(--spacing-sm) 0;
+    color: var(--neutral-600);
+    padding-left: var(--spacing-lg);
+    position: relative;
+  }
+
+  .service-details li:before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  @keyframes slideInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .benefit-item {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+  }
+
+  .benefit-check {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cta) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: var(--font-size-lg);
+  }
+
+  .benefit-item h3 {
+    color: var(--accent-light);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .benefit-item p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .service-card {
+      padding: var(--spacing-lg);
+    }
+  }
 </style>

@@ -1,283 +1,478 @@
-<svelte:head>
-	<title>Florida AI — AI Consulting for Small Businesses</title>
-	<meta name="description" content="Florida AI helps small businesses harness the power of AI. Free AI audits, hands-on setup, ongoing support." />
-</svelte:head>
+<script>
+  import { onMount } from 'svelte';
+  import { fadeIn } from '$lib/actions/fadeIn.js';
 
-<!-- Hero -->
+  let stats = {
+    clients: 0,
+    projects: 0,
+    satisfaction: 0
+  };
+
+  onMount(() => {
+    const delay = setTimeout(() => {
+      stats.clients = 50;
+      stats.projects = 120;
+      stats.satisfaction = 98;
+    }, 500);
+
+    return () => clearTimeout(delay);
+  });
+</script>
+
+<!-- HERO SECTION -->
 <section class="hero">
-	<div class="container">
-		<div class="hero-content">
-			<p class="hero-eyebrow">AI consulting for small businesses</p>
-			<h1>Stop worrying about AI.<br/>Start <span class="highlight">using</span> it.</h1>
-			<p class="hero-text">
-				You know AI is changing everything. But between the hype and the jargon,
-				it's hard to know where to start. We cut through the noise, come to your
-				office, and get AI working for your business — in language you understand.
-			</p>
-			<div class="hero-actions">
-				<a href="/contact" class="btn btn-primary btn-lg">Book a Free AI Audit</a>
-				<a href="/services" class="btn btn-outline btn-lg">See Our Services</a>
-			</div>
-		</div>
-	</div>
+  <div class="hero-background"></div>
+  <div class="hero-blob hero-blob-1"></div>
+  <div class="hero-blob hero-blob-2"></div>
+
+  <div class="hero-content">
+    <h1 class="hero-title">Transform Your Business with AI</h1>
+    <p class="hero-subtitle">Custom AI solutions designed for Florida's small businesses. Automate workflows, enhance customer experience, and drive growth.</p>
+    <div class="hero-buttons">
+      <button class="btn btn-cta">Get Started Today</button>
+      <button class="btn btn-secondary">Learn More</button>
+    </div>
+  </div>
 </section>
 
-<!-- Pain points -->
-<section class="section section-alt">
-	<div class="container text-center">
-		<h2>Sound familiar?</h2>
-		<p class="subtitle">These are the things we hear from business owners every day.</p>
-		<div class="pain-grid">
-			<div class="pain-card">
-				<div class="pain-icon">&#128172;</div>
-				<p>"I've tried ChatGPT but I don't know how to actually use it for my business."</p>
-			</div>
-			<div class="pain-card">
-				<div class="pain-icon">&#128274;</div>
-				<p>"I'm worried about sending confidential client data to AI tools."</p>
-			</div>
-			<div class="pain-card">
-				<div class="pain-icon">&#9201;</div>
-				<p>"My staff spend hours on emails and documents that AI could probably help with."</p>
-			</div>
-			<div class="pain-card">
-				<div class="pain-icon">&#128176;</div>
-				<p>"I can't afford to hire a tech team, but I know I'm falling behind."</p>
-			</div>
-		</div>
-	</div>
-</section>
-
-<!-- How it works -->
+<!-- PAIN POINTS SECTION -->
 <section class="section">
-	<div class="container text-center">
-		<h2>How it works</h2>
-		<p class="subtitle">Three simple steps to get AI working in your business.</p>
-		<div class="steps-grid">
-			<div class="step">
-				<div class="step-number">1</div>
-				<h3>Free AI Audit</h3>
-				<p>We visit your office, learn about your day-to-day work, and show you — live — how AI
-				   can handle your real tasks. No slides, no jargon. Just a practical demo with your actual work.</p>
-			</div>
-			<div class="step">
-				<div class="step-number">2</div>
-				<h3>Setup &amp; Training</h3>
-				<p>We configure AI tools tailored to your business, build custom templates for your
-				   common tasks, and train your team in a hands-on half-day session. You'll be up and
-				   running before we leave.</p>
-			</div>
-			<div class="step">
-				<div class="step-number">3</div>
-				<h3>Ongoing Support</h3>
-				<p>AI moves fast. Our monthly retainer includes support hours, template updates,
-				   and regular check-ins to make sure you're getting the most from your setup
-				   as the technology evolves.</p>
-			</div>
-		</div>
-	</div>
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h2 class="fade-in">We Solve Real Problems</h2>
+      <p class="fade-in text-muted">Challenges small businesses face with manual processes</p>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card card-glass fade-in" use:fadeIn>
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="1"></circle>
+            <path d="M12 9v3m0 3v3m-9-3h3m3-3v3"></path>
+            <path d="M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path>
+          </svg>
+        </div>
+        <h3>Manual Workflows Drain Time</h3>
+        <p class="text-muted">Repetitive tasks waste hours every day that could be spent on growing your business.</p>
+      </div>
+
+      <div class="card card-glass fade-in" use:fadeIn>
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 9v2m0 4v2m0-12h.01M15 9h.01m-6 0h.01M9 15h.01m3 0h.01"></path>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+          </svg>
+        </div>
+        <h3>Security & Data Concerns</h3>
+        <p class="text-muted">Protecting customer data and maintaining compliance becomes increasingly complex.</p>
+      </div>
+
+      <div class="card card-glass fade-in" use:fadeIn>
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h3>Missing Revenue Opportunities</h3>
+        <p class="text-muted">Lack of insight into customer behavior means lost opportunities for growth.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Service tiers preview -->
-<section class="section section-alt">
-	<div class="container text-center">
-		<h2>Choose your starting point</h2>
-		<p class="subtitle">Whether you want to dip a toe in or dive deep, we have you covered.</p>
-		<div class="tiers-grid">
-			<div class="card">
-				<h3>AI Kickstart</h3>
-				<p class="tier-price">Free</p>
-				<p class="tier-desc">A 45-minute visit to your office. We look at how you work,
-				   identify where AI can save you time, and give you a live demo using your own tasks.</p>
-				<a href="/contact" class="btn btn-outline">Book Now</a>
-			</div>
-			<div class="card card-featured">
-				<h3>AI Ready</h3>
-				<p class="tier-price">$450</p>
-				<p class="tier-desc">Half-day setup and training on your existing machines. We configure
-				   AI tools, build templates for your workflows, and get your team comfortable using them.</p>
-				<a href="/contact" class="btn btn-primary">Get Started</a>
-			</div>
-			<div class="card">
-				<h3>AI Powerhouse</h3>
-				<p class="tier-price">$1,200</p>
-				<p class="tier-desc">We supply and install a dedicated, pre-configured AI workstation.
-				   Clean, professional setup with everything ready to go, plus full training.</p>
-				<a href="/contact" class="btn btn-outline">Learn More</a>
-			</div>
-		</div>
-		<p class="tiers-retainer">
-			All clients can add our <strong>monthly retainer ($500/mo)</strong> for ongoing support,
-			template updates, and regular check-ins.
-		</p>
-	</div>
+<!-- HOW IT WORKS SECTION -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h2 class="fade-in">How It Works</h2>
+      <p class="fade-in text-muted">A simple, proven process</p>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-item fade-in" use:fadeIn>
+        <div class="timeline-number">1</div>
+        <h3>Discovery & Analysis</h3>
+        <p>We understand your business challenges, goals, and current systems.</p>
+      </div>
+
+      <div class="timeline-item fade-in" use:fadeIn>
+        <div class="timeline-number">2</div>
+        <h3>Custom Solution Design</h3>
+        <p>Our AI experts design a tailored solution that fits your workflow.</p>
+      </div>
+
+      <div class="timeline-item fade-in" use:fadeIn>
+        <div class="timeline-number">3</div>
+        <h3>Implementation</h3>
+        <p>We deploy and integrate the solution with your existing systems.</p>
+      </div>
+
+      <div class="timeline-item fade-in" use:fadeIn>
+        <div class="timeline-number">4</div>
+        <h3>Training & Support</h3>
+        <p>Your team is trained and we provide ongoing support and optimization.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Trust / social proof placeholder -->
+<!-- PRICING SECTION -->
 <section class="section">
-	<div class="container text-center">
-		<h2>AI that works for real businesses</h2>
-		<div class="trust-grid">
-			<div class="trust-item">
-				<div class="trust-stat">2hrs</div>
-				<p>Average time saved per employee, per day, on email and document tasks</p>
-			</div>
-			<div class="trust-item">
-				<div class="trust-stat">45min</div>
-				<p>That's all it takes for our free audit to show you what's possible</p>
-			</div>
-			<div class="trust-item">
-				<div class="trust-stat">Plain English</div>
-				<p>No jargon, no hype. Just practical help from people who understand small business</p>
-			</div>
-		</div>
-	</div>
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h2 class="fade-in">Simple, Transparent Pricing</h2>
+      <p class="fade-in text-muted">Choose the plan that fits your business</p>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card-accent-border fade-in" use:fadeIn>
+        <div class="card" style="border: none; background: white;">
+          <h3>Starter</h3>
+          <div class="price">$999<span>/month</span></div>
+          <p class="text-muted">Perfect for small teams just getting started.</p>
+          <ul class="feature-list">
+            <li>1 AI workflow automation</li>
+            <li>Basic support</li>
+            <li>Up to 1,000 tasks/month</li>
+            <li>Email support</li>
+          </ul>
+          <button class="btn btn-secondary" style="width: 100%;">Get Started</button>
+        </div>
+      </div>
+
+      <div class="card-accent-border fade-in featured" use:fadeIn>
+        <div class="featured-badge">Most Popular</div>
+        <div class="card" style="border: none; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white;">
+          <h3 style="color: white;">Professional</h3>
+          <div class="price" style="color: var(--accent-light);">$2,999<span>/month</span></div>
+          <p style="color: rgba(255, 255, 255, 0.7);">Best for growing businesses.</p>
+          <ul class="feature-list" style="color: rgba(255, 255, 255, 0.8);">
+            <li>5 AI workflow automations</li>
+            <li>Priority support</li>
+            <li>Up to 10,000 tasks/month</li>
+            <li>Phone & email support</li>
+          </ul>
+          <button class="btn btn-cta" style="width: 100%;">Get Started</button>
+        </div>
+      </div>
+
+      <div class="card-accent-border fade-in" use:fadeIn>
+        <div class="card" style="border: none; background: white;">
+          <h3>Enterprise</h3>
+          <div class="price">Custom</div>
+          <p class="text-muted">For enterprises needing custom solutions.</p>
+          <ul class="feature-list">
+            <li>Unlimited AI workflows</li>
+            <li>Dedicated support</li>
+            <li>Unlimited tasks</li>
+            <li>Custom integrations</li>
+          </ul>
+          <button class="btn btn-primary" style="width: 100%;">Contact Sales</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Final CTA -->
-<section class="cta-section">
-	<div class="container text-center">
-		<h2>Ready to see what AI can do for you?</h2>
-		<p class="cta-text">Book a free, no-obligation AI audit. We'll come to you, look at your
-		   real work, and show you exactly how AI can help. No commitment, no hard sell.</p>
-		<a href="/contact" class="btn btn-primary btn-lg">Book Your Free AI Audit</a>
-	</div>
+<!-- TRUST SECTION -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="text-center mb-2xl">
+      <h2 class="fade-in">Trusted by Businesses Across Florida</h2>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="stat-card fade-in" use:fadeIn>
+        <div class="stat-number">{stats.clients}+</div>
+        <div class="stat-label">Happy Clients</div>
+      </div>
+      <div class="stat-card fade-in" use:fadeIn>
+        <div class="stat-number">{stats.projects}+</div>
+        <div class="stat-label">Projects Completed</div>
+      </div>
+      <div class="stat-card fade-in" use:fadeIn>
+        <div class="stat-number">{stats.satisfaction}%</div>
+        <div class="stat-label">Satisfaction Rate</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA SECTION -->
+<section class="section section-accent">
+  <div class="container">
+    <div class="cta-content fade-in" use:fadeIn>
+      <h2>Ready to Transform Your Business?</h2>
+      <p>Get in touch with our AI experts today and discover how we can help you automate, streamline, and grow.</p>
+      <button class="btn btn-secondary">Schedule a Free Consultation</button>
+    </div>
+  </div>
 </section>
 
 <style>
-	/* Hero */
-	.hero {
-		padding: 5rem 0 4rem;
-		background: linear-gradient(135deg, var(--color-primary-lighter) 0%, var(--color-bg) 70%);
-	}
-	.hero-content { max-width: 720px; }
-	.hero-eyebrow {
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		font-size: 0.85rem;
-		color: var(--color-accent);
-		font-weight: 600;
-		margin-bottom: var(--space-md);
-	}
-	.hero h1 { margin-bottom: var(--space-lg); }
-	.highlight { color: var(--color-accent); }
-	.hero-text {
-		font-size: 1.15rem;
-		color: var(--color-text-light);
-		line-height: 1.75;
-		margin-bottom: var(--space-2xl);
-	}
-	.hero-actions {
-		display: flex;
-		gap: var(--space-md);
-		flex-wrap: wrap;
-	}
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: var(--spacing-3xl) 0;
+  }
 
-	/* Pain points */
-	.pain-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: var(--space-lg);
-		max-width: 800px;
-		margin: 0 auto;
-	}
-	.pain-card {
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-		border-radius: 10px;
-		padding: var(--space-xl);
-		text-align: left;
-	}
-	.pain-icon {
-		font-size: 1.75rem;
-		margin-bottom: var(--space-sm);
-	}
-	.pain-card p {
-		font-style: italic;
-		color: var(--color-text-light);
-	}
+  .hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.9) 0%,
+      rgba(30, 41, 59, 0.8) 25%,
+      rgba(8, 145, 178, 0.3) 50%,
+      rgba(15, 23, 42, 0.8) 75%,
+      rgba(249, 115, 22, 0.1) 100%
+    );
+    background-size: 400% 400%;
+    animation: gradientMesh 15s ease infinite;
+    z-index: 0;
+  }
 
-	/* Steps */
-	.steps-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--space-2xl);
-		text-align: left;
-	}
-	.step-number {
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		background: var(--color-accent);
-		color: white;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 700;
-		font-size: 1.1rem;
-		margin-bottom: var(--space-md);
-	}
-	.step p { color: var(--color-text-light); }
+  .hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    filter: blur(40px);
+  }
 
-	/* Tiers */
-	.tiers-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--space-lg);
-		margin-bottom: var(--space-2xl);
-	}
-	.tier-price {
-		font-size: 2rem;
-		font-weight: 700;
-		color: var(--color-primary);
-		margin: var(--space-md) 0;
-	}
-	.tier-desc {
-		color: var(--color-text-light);
-		margin-bottom: var(--space-xl);
-		flex-grow: 1;
-	}
-	.tiers-retainer {
-		color: var(--color-text-light);
-		font-size: 0.95rem;
-	}
+  .hero-blob-1 {
+    width: 300px;
+    height: 300px;
+    background: rgba(6, 182, 212, 0.2);
+    top: -50px;
+    left: -50px;
+    animation: float 8s ease-in-out infinite;
+  }
 
-	/* Trust */
-	.trust-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--space-2xl);
-		margin-top: var(--space-2xl);
-	}
-	.trust-stat {
-		font-size: 2rem;
-		font-weight: 700;
-		color: var(--color-accent);
-		margin-bottom: var(--space-sm);
-	}
-	.trust-item p { color: var(--color-text-light); }
+  .hero-blob-2 {
+    width: 250px;
+    height: 250px;
+    background: rgba(249, 115, 22, 0.15);
+    bottom: -30px;
+    right: -30px;
+    animation: floatAlt 10s ease-in-out infinite;
+  }
 
-	/* CTA */
-	.cta-section {
-		padding: var(--space-4xl) 0;
-		background: var(--color-primary);
-	}
-	.cta-section h2 { color: var(--color-text-inverse); }
-	.cta-text {
-		color: #cbd5e0;
-		max-width: 580px;
-		margin: 0 auto var(--space-2xl);
-		font-size: 1.1rem;
-	}
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: white;
+    animation: fadeInUp 1s ease-out 0.2s backwards;
+  }
 
-	/* Mobile */
-	@media (max-width: 768px) {
-		.hero { padding: 3rem 0; }
-		.pain-grid,
-		.steps-grid,
-		.tiers-grid,
-		.trust-grid {
-			grid-template-columns: 1fr;
-		}
-	}
+  .hero-title {
+    font-size: var(--font-size-5xl);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: var(--spacing-lg);
+    background: linear-gradient(135deg, white 0%, var(--accent-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: var(--font-size-xl);
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: var(--spacing-2xl);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeInUp 1s ease-out 0.4s backwards;
+  }
+
+  .icon-box {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cta) 100%);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .icon-box svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .timeline {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-2xl);
+    position: relative;
+  }
+
+  .timeline-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    position: relative;
+    z-index: 2;
+  }
+
+  .timeline-item h3 {
+    color: var(--accent-light);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .timeline-item p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+  }
+
+  .timeline-number {
+    position: absolute;
+    top: -20px;
+    left: var(--spacing-lg);
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cta) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    color: white;
+  }
+
+  .price {
+    font-size: var(--font-size-4xl);
+    font-weight: 800;
+    margin: var(--spacing-lg) 0;
+  }
+
+  .price span {
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    color: var(--neutral-600);
+  }
+
+  .feature-list {
+    list-style: none;
+    margin: var(--spacing-xl) 0;
+  }
+
+  .feature-list li {
+    padding: var(--spacing-sm) 0;
+    color: var(--neutral-600);
+    display: flex;
+    align-items: center;
+  }
+
+  .feature-list li:before {
+    content: '✓';
+    margin-right: var(--spacing-md);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .featured {
+    transform: scale(1.05);
+  }
+
+  .featured-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cta) 100%);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    z-index: 10;
+  }
+
+  .stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .stat-number {
+    font-size: var(--font-size-5xl);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+  }
+
+  .cta-content {
+    text-align: center;
+    color: white;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .cta-content h2 {
+    margin-bottom: var(--spacing-lg);
+    color: white;
+  }
+
+  .cta-content p {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-2xl);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: var(--font-size-4xl);
+    }
+
+    .hero-subtitle {
+      font-size: var(--font-size-base);
+    }
+
+    .timeline {
+      grid-template-columns: 1fr;
+    }
+
+    .featured {
+      transform: scale(1);
+    }
+
+    .hero-buttons {
+      flex-direction: column;
+    }
+
+    .hero-buttons button {
+      width: 100%;
+    }
+  }
 </style>
