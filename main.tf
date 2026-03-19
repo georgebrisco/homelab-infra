@@ -430,6 +430,26 @@ locals {
       dns         = local.dns_servers_default
       roles       = ["openclaw"]
     }
+    florida_ai = {
+      vm_id       = 918
+      hostname    = "florida-ai"
+      template    = local.ubuntu_template
+      os_type     = "ubuntu"
+      cores       = 1
+      memory      = 512
+      swap        = 0
+      disk_gb     = 4
+      reserved_ip = "192.168.50.36"
+      mac         = ""
+      static      = false
+      privileged  = false
+      tags        = ["florida-ai", "website"]
+      mounts      = []
+      firewall    = false
+      console     = false
+      dns         = local.dns_servers_default
+      roles       = ["florida_ai"]
+    }
   }
 
   # Derived lookups
