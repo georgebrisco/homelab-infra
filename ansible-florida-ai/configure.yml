@@ -1,0 +1,13 @@
+---
+# Deploy florida-ai SvelteKit static site
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py florida-ai-infra/ansible/configure.yml
+
+- name: Deploy florida-ai
+  hosts: florida_ai_hosts
+  gather_facts: true
+
+  roles:
+    - role: nginx-svelte

@@ -1,0 +1,35 @@
+# Florida AI — SvelteKit static site, managed by Ansible
+# Served via cloudflared tunnel
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/florida-ai;
+    index index.html;
+
+    include snippets/security-headers.conf;
+
+    # SvelteKit static adapter — client-side routing
+    location / {
+        try_files $uri $uri/ $uri.html /index.html;
+    }
+
+    # Immutable hashed assets — long cache
+    location /_app/immutable/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Static assets
+    location /assets/ {
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    gzip on;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    access_log /var/log/nginx/florida-ai-access.log;
+    error_log  /var/log/nginx/florida-ai-error.log;
+}

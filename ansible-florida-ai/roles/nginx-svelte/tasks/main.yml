@@ -1,0 +1,50 @@
+---
+# florida-ai — Nginx serving SvelteKit static build
+# Cloudflared is deployed separately via ansible-tunnel.
+
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Ensure web root exists
+  file:
+    path: /var/www/florida-ai
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Deploy security headers snippet
+  template:
+    src: security-headers.conf.j2
+    dest: /etc/nginx/snippets/security-headers.conf
+    mode: "0644"
+  notify: reload nginx
+
+- name: Deploy florida-ai site config
+  template:
+    src: florida-ai.conf.j2
+    dest: /etc/nginx/sites-available/florida-ai
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable florida-ai site
+  file:
+    src: /etc/nginx/sites-available/florida-ai
+    dest: /etc/nginx/sites-enabled/florida-ai
+    state: link
+  notify: reload nginx
+
+- name: Remove default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: started
