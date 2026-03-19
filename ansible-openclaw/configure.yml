@@ -1,0 +1,28 @@
+---
+# Deploy OpenClaw AI gateway
+#
+# Installs Node.js 22, OpenClaw, nginx TLS reverse proxy, and signal-cli.
+# The gateway runs as a user-level systemd service (root) bound to loopback;
+# nginx terminates TLS on :443 and proxies to 127.0.0.1:18789.
+#
+# Prerequisites:
+#   - Container created via Terraform with role 'openclaw'
+#   - DHCP reservation in router-infra
+#   - nesting=1 enabled on the container (required for systemd 257+)
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-openclaw/configure.yml
+#
+# Post-install:
+#   SSH into the container and run:
+#     openclaw configure --section model    # set LLM provider + API key
+#     openclaw configure --section channels # link WhatsApp/Signal/etc
+#     openclaw devices list                 # approve browser pairing
+
+- name: Deploy OpenClaw gateway
+  hosts: openclaw_hosts
+  gather_facts: true
+
+  roles:
+    - role: openclaw

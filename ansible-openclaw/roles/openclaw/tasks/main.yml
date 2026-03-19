@@ -1,0 +1,173 @@
+---
+# =============================================================================
+# 1. Node.js {{ nodejs_major }}.x
+# =============================================================================
+
+- name: Add NodeSource GPG key
+  shell: curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg
+  args:
+    creates: /usr/share/keyrings/nodesource.gpg
+
+- name: Add NodeSource apt repo
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_{{ nodejs_major }}.x nodistro main"
+    filename: nodesource
+    state: present
+
+- name: Install Node.js and system packages
+  apt:
+    name:
+      - nodejs
+      - nginx
+      - git
+      - vim
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+
+# =============================================================================
+# 2. OpenClaw
+# =============================================================================
+
+- name: Install OpenClaw globally
+  npm:
+    name: openclaw
+    version: "{{ openclaw_version }}"
+    global: true
+    state: present
+
+- name: Get OpenClaw version
+  command: openclaw --version
+  register: openclaw_installed_version
+  changed_when: false
+
+- name: Show OpenClaw version
+  debug:
+    msg: "{{ openclaw_installed_version.stdout }}"
+
+# =============================================================================
+# 3. OpenClaw gateway systemd service
+# =============================================================================
+
+- name: Install gateway systemd service
+  command: openclaw gateway install
+  args:
+    creates: /root/.config/systemd/user/openclaw-gateway.service
+
+- name: Enable lingering for root (keeps user services after logout)
+  command: loginctl enable-linger root
+  changed_when: false
+
+- name: Deploy gateway service override
+  template:
+    src: openclaw-gateway.service.j2
+    dest: /root/.config/systemd/user/openclaw-gateway.service
+    mode: "0644"
+  notify: Restart openclaw gateway
+
+- name: Enable openclaw gateway service
+  become: false
+  systemd:
+    name: openclaw-gateway.service
+    enabled: true
+    daemon_reload: true
+    scope: user
+
+# =============================================================================
+# 4. signal-cli (native binary)
+# =============================================================================
+
+- name: Create signal-cli directory
+  file:
+    path: "/root/.openclaw/tools/signal-cli/{{ signal_cli_version }}"
+    state: directory
+
+- name: Download signal-cli native binary
+  get_url:
+    url: "https://github.com/AsamK/signal-cli/releases/download/v{{ signal_cli_version }}/signal-cli-{{ signal_cli_version }}-Linux-native.tar.gz"
+    dest: /tmp/signal-cli-native.tar.gz
+  register: signal_download
+
+- name: Extract signal-cli
+  unarchive:
+    src: /tmp/signal-cli-native.tar.gz
+    dest: "/root/.openclaw/tools/signal-cli/{{ signal_cli_version }}/"
+    remote_src: true
+    extra_opts: ["--transform", "s/signal-cli/signal-cli-bin/"]
+  when: signal_download.changed
+
+- name: Rename extracted binary
+  copy:
+    src: "/root/.openclaw/tools/signal-cli/{{ signal_cli_version }}/signal-cli-bin"
+    dest: "/root/.openclaw/tools/signal-cli/{{ signal_cli_version }}/signal-cli"
+    remote_src: true
+    mode: "0755"
+  when: signal_download.changed
+
+- name: Symlink signal-cli to PATH
+  file:
+    src: "/root/.openclaw/tools/signal-cli/{{ signal_cli_version }}/signal-cli"
+    dest: /usr/local/bin/signal-cli
+    state: link
+
+# =============================================================================
+# 5. TLS certificate (self-signed)
+# =============================================================================
+
+- name: Create TLS directory
+  file:
+    path: "{{ openclaw_tls_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Generate self-signed TLS certificate
+  command: >
+    openssl req -x509 -nodes
+    -days {{ openclaw_tls_days }}
+    -newkey rsa:2048
+    -keyout {{ openclaw_tls_dir }}/openclaw.key
+    -out {{ openclaw_tls_dir }}/openclaw.crt
+    -subj "/C=GB/ST=Home/L=Homelab/O=Brisco/CN={{ openclaw_tls_cn }}"
+    -addext "subjectAltName=DNS:{{ openclaw_tls_cn }},DNS:openclaw,IP:{{ ansible_default_ipv4.address }}"
+  args:
+    creates: "{{ openclaw_tls_dir }}/openclaw.crt"
+
+- name: Set TLS key permissions
+  file:
+    path: "{{ openclaw_tls_dir }}/openclaw.key"
+    mode: "0600"
+
+# =============================================================================
+# 6. Nginx reverse proxy
+# =============================================================================
+
+- name: Deploy nginx config
+  template:
+    src: nginx-openclaw.conf.j2
+    dest: /etc/nginx/sites-available/openclaw
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Enable nginx site
+  file:
+    src: /etc/nginx/sites-available/openclaw
+    dest: /etc/nginx/sites-enabled/openclaw
+    state: link
+  notify: Restart nginx
+
+- name: Remove default nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart nginx
+
+- name: Test nginx config
+  command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx is running
+  systemd:
+    name: nginx
+    state: started
+    enabled: true

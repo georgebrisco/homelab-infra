@@ -1,0 +1,12 @@
+---
+- name: Restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+
+- name: Restart openclaw gateway
+  become: false
+  systemd:
+    name: openclaw-gateway.service
+    state: restarted
+    scope: user

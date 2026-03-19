@@ -1,0 +1,18 @@
+---
+# OpenClaw role defaults
+
+openclaw_version: "latest"
+openclaw_port: 18789
+openclaw_bind: loopback
+openclaw_user: root
+
+# TLS certificate
+openclaw_tls_cn: "openclaw.homelab"
+openclaw_tls_days: 3650
+openclaw_tls_dir: /etc/nginx/ssl
+
+# signal-cli
+signal_cli_version: "0.14.1"
+
+# Node.js
+nodejs_major: 22
