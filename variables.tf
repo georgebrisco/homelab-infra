@@ -86,3 +86,13 @@ variable "brisco_zone_id" {
   description = "Cloudflare zone ID for brisco domain"
   type        = string
 }
+
+variable "brightpelican_domain" {
+  description = "Domain for Bright Pelican AI consulting site"
+  type        = string
+}
+
+variable "brightpelican_zone_id" {
+  description = "Cloudflare zone ID for Bright Pelican domain"
+  type        = string
+}

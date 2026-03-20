@@ -72,5 +72,6 @@ output "cloudflare_tunnel_tokens" {
     preview_site    = cloudflare_zero_trust_tunnel_cloudflared.preview_site.tunnel_token
     production_site = cloudflare_zero_trust_tunnel_cloudflared.production_site.tunnel_token
     dolphin         = cloudflare_zero_trust_tunnel_cloudflared.dolphin.tunnel_token
+    florida_ai      = cloudflare_zero_trust_tunnel_cloudflared.florida_ai.tunnel_token
   }
 }
