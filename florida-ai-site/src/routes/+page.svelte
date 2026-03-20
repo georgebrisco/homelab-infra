@@ -2,11 +2,11 @@
   import { onMount } from 'svelte';
   import { fadeIn } from '$lib/actions/fadeIn.js';
 
-  let stats = {
+  let stats = $state({
     clients: 0,
     projects: 0,
     satisfaction: 0
-  };
+  });
 
   onMount(() => {
     const delay = setTimeout(() => {

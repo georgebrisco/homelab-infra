@@ -15,11 +15,9 @@
     e.preventDefault();
     isSubmitting = true;
     
-    // Simulate form submission
     setTimeout(() => {
       submitted = true;
       isSubmitting = false;
-      // Reset form after 3 seconds
       setTimeout(() => {
         submitted = false;
         formData = { name: '', email: '', company: '', message: '' };
@@ -42,7 +40,7 @@
             <p>We've received your message and will get back to you soon.</p>
           </div>
         {:else}
-          <form on:submit={handleSubmit} class="contact-form">
+          <form onsubmit={handleSubmit} class="contact-form">
             <div class="form-group">
               <label for="name">Your Name</label>
               <input

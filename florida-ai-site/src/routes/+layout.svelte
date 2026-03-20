@@ -2,8 +2,9 @@
   import '../app.css';
   import { onMount } from 'svelte';
 
-  let mobileMenuOpen = (false);
-  let scrolled = (false);
+  let mobileMenuOpen = $state(false);
+  let scrolled = $state(false);
+  let { children } = $props();
 
   onMount(() => {
     const handleScroll = () => {
@@ -23,23 +24,23 @@
   };
 </script>
 
-<header class=navbar class:scrolled>
-  <nav class=nav-container>
-    <div class=nav-brand>
-      <a href=/ class=logo>
-        <div class=logo-icon>AI</div>
+<header class="navbar" class:scrolled>
+  <nav class="nav-container">
+    <div class="nav-brand">
+      <a href="/" class="logo">
+        <div class="logo-icon">AI</div>
         <span>Florida AI</span>
       </a>
     </div>
 
-    <div class=nav-menu class:open={mobileMenuOpen}>
-      <a href=/ class=nav-link on:click={closeMobileMenu}>Home</a>
-      <a href=/about class=nav-link on:click={closeMobileMenu}>About</a>
-      <a href=/services class=nav-link on:click={closeMobileMenu}>Services</a>
-      <a href=/contact class=nav-link nav-link-cta on:click={closeMobileMenu}>Contact</a>
+    <div class="nav-menu" class:open={mobileMenuOpen}>
+      <a href="/" class="nav-link" onclick={closeMobileMenu}>Home</a>
+      <a href="/about" class="nav-link" onclick={closeMobileMenu}>About</a>
+      <a href="/services" class="nav-link" onclick={closeMobileMenu}>Services</a>
+      <a href="/contact" class="nav-link nav-link-cta" onclick={closeMobileMenu}>Contact</a>
     </div>
 
-    <button class=mobile-toggle on:click={toggleMobileMenu} aria-label=Toggle menu>
+    <button class="mobile-toggle" onclick={toggleMobileMenu} aria-label="Toggle menu">
       <span></span>
       <span></span>
       <span></span>
@@ -48,35 +49,35 @@
 </header>
 
 <main>
-  <slot />
+  {@render children()}
 </main>
 
-<footer class=footer>
-  <div class=container>
-    <div class=footer-content>
-      <div class=footer-section>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-section">
         <h3>Florida AI</h3>
         <p>Empowering Florida's small businesses with intelligent AI solutions.</p>
       </div>
-      <div class=footer-section>
+      <div class="footer-section">
         <h4>Links</h4>
         <ul>
-          <li><a href=/>Home</a></li>
-          <li><a href=/about>About</a></li>
-          <li><a href=/services>Services</a></li>
-          <li><a href=/contact>Contact</a></li>
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/services">Services</a></li>
+          <li><a href="/contact">Contact</a></li>
         </ul>
       </div>
-      <div class=footer-section>
+      <div class="footer-section">
         <h4>Connect</h4>
         <ul>
-          <li><a href=#>Twitter</a></li>
-          <li><a href=#>LinkedIn</a></li>
-          <li><a href=#>GitHub</a></li>
+          <li><a href="#">Twitter</a></li>
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
-    <div class=footer-bottom>
+    <div class="footer-bottom">
       <p>&copy; 2024 Florida AI. All rights reserved.</p>
     </div>
   </div>
