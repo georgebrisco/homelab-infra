@@ -1,0 +1,175 @@
+---
+# ansible-hemera/roles/hemera-cameras/tasks/main.yml
+# Configures dual-camera RTSP streaming + Hailo-accelerated detection on Pi 5
+
+- name: Install system packages
+  apt:
+    name:
+      - vim
+      - curl
+      - rsync
+      - wget
+      - jq
+      - unzip
+      - python3
+      - python3-pip
+      - python3-venv
+      - ffmpeg
+      - unattended-upgrades
+      - rpicam-apps
+    state: present
+    update_cache: true
+
+- name: Install Hailo packages
+  apt:
+    name:
+      - hailort
+      - hailort-pcie-driver
+      - hailo-tappas-core
+      - python3-hailort
+      - python3-hailo-tappas
+      - rpicam-apps-hailo-postprocess
+      - rpicam-apps-encoder
+    state: present
+
+- name: Install Python packages for detection dashboard
+  pip:
+    name:
+      - flask
+      - opencv-python-headless
+    extra_args: "--break-system-packages"
+
+- name: Configure boot overlays for dual cameras
+  copy:
+    dest: /boot/firmware/config.txt
+    content: |
+      # Hemera boot config — managed by Ansible
+      dtparam=audio=on
+      # camera_auto_detect=1 (disabled — explicit overlays below)
+      display_auto_detect=1
+      auto_initramfs=1
+      dtoverlay=vc4-kms-v3d
+      max_framebuffers=2
+      disable_fw_kms_setup=1
+      arm_64bit=1
+      disable_overscan=1
+      arm_boost=1
+      [cm4]
+      otg_mode=1
+      [cm5]
+      dtoverlay=dwc2,dr_mode=host
+      [all]
+      # Dual camera setup
+      dtoverlay=imx477,cam0
+      dtoverlay=arducam-64mp,cam1
+  register: boot_config
+
+# --- mediamtx ---
+
+- name: Create mediamtx system user
+  user:
+    name: mediamtx
+    system: true
+    shell: /usr/sbin/nologin
+    groups: video,render
+    create_home: false
+
+- name: Create mediamtx directory
+  file:
+    path: "{{ mediamtx_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+
+- name: Download mediamtx
+  unarchive:
+    src: "https://github.com/bluenviron/mediamtx/releases/download/{{ mediamtx_version }}/mediamtx_{{ mediamtx_version }}_linux_arm64.tar.gz"
+    dest: "{{ mediamtx_install_dir }}"
+    remote_src: true
+    creates: "{{ mediamtx_install_dir }}/mediamtx"
+
+- name: Template mediamtx config
+  template:
+    src: mediamtx.yml.j2
+    dest: "{{ mediamtx_install_dir }}/mediamtx.yml"
+    owner: mediamtx
+    group: video
+  notify: restart mediamtx
+
+- name: Template mediamtx systemd service
+  template:
+    src: mediamtx.service.j2
+    dest: /etc/systemd/system/mediamtx.service
+  notify: restart mediamtx
+
+- name: Enable and start mediamtx
+  systemd:
+    name: mediamtx
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# --- Hailo detection dashboard ---
+
+- name: Create detection directory
+  file:
+    path: "{{ detect_install_dir }}"
+    state: directory
+    owner: admin
+    group: video
+
+- name: Deploy detection dashboard script
+  copy:
+    src: detect.py
+    dest: "{{ detect_install_dir }}/detect.py"
+    owner: admin
+    group: video
+    mode: "0755"
+  notify: restart hemera-detect
+
+- name: Template detection systemd service
+  template:
+    src: hemera-detect.service.j2
+    dest: /etc/systemd/system/hemera-detect.service
+  notify: restart hemera-detect
+
+- name: Enable and start hemera-detect
+  systemd:
+    name: hemera-detect
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# --- node_exporter ---
+
+- name: Download node_exporter
+  unarchive:
+    src: "https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz"
+    dest: /tmp
+    remote_src: true
+    creates: /tmp/node_exporter-1.8.2.linux-arm64/node_exporter
+
+- name: Install node_exporter binary
+  copy:
+    src: /tmp/node_exporter-1.8.2.linux-arm64/node_exporter
+    dest: /usr/local/bin/node_exporter
+    mode: "0755"
+    remote_src: true
+
+- name: Template node_exporter systemd service
+  template:
+    src: node-exporter.service.j2
+    dest: /etc/systemd/system/node-exporter.service
+  notify: restart node-exporter
+
+- name: Enable and start node_exporter
+  systemd:
+    name: node-exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Reboot notice
+  debug:
+    msg: "Boot config changed — reboot required for camera overlay changes to take effect"
+  when: boot_config.changed

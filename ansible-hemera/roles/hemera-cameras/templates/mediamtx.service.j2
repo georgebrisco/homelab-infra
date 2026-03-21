@@ -1,0 +1,14 @@
+[Unit]
+Description=MediaMTX RTSP Server
+After=network.target
+
+[Service]
+Type=simple
+User=mediamtx
+Group=video
+ExecStart={{ mediamtx_install_dir }}/mediamtx {{ mediamtx_install_dir }}/mediamtx.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

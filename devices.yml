@@ -36,6 +36,12 @@ managed_devices:
     ansible_user: root
     roles: [iot, rpi]
 
+  - name: hemera
+    mac: "88:a2:9e:09:77:a9"
+    ip: "192.168.50.33"
+    ansible_user: admin
+    roles: [iot, rpi, hemera]
+
 non_managed_reservations:
   - { name: xt8-wap,    mac: "7c:10:c9:e4:a9:90", ip: "192.168.50.3" }
   - { name: linksys-iot, mac: "60:38:e0:d0:65:78", ip: "192.168.50.32" }

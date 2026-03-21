@@ -1,0 +1,21 @@
+[Unit]
+Description=Hemera Hailo Detection Dashboard
+After=network.target mediamtx.service
+Wants=mediamtx.service
+
+[Service]
+Type=simple
+User=admin
+Group=video
+WorkingDirectory={{ detect_install_dir }}
+Environment=RTSP_URL={{ detect_rtsp_url }}
+Environment=MODEL_PATH={{ detect_model }}
+Environment=CONFIDENCE={{ detect_confidence }}
+Environment=PORT={{ detect_port }}
+ExecStart=/usr/bin/python3 {{ detect_install_dir }}/detect.py
+Restart=always
+RestartSec=10
+SupplementaryGroups=render
+
+[Install]
+WantedBy=multi-user.target

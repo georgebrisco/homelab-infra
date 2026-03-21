@@ -10,7 +10,7 @@
 INVENTORY = -i scripts/terraform_inventory.py
 ANSIBLE   = ansible-playbook $(INVENTORY)
 
-.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant dolphin tbs panoptes migadu inference openclaw florida-ai
+.PHONY: help plan apply inventory common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns router k3s k8s all-services backup status homeassistant dolphin tbs panoptes migadu inference openclaw florida-ai hemera
 
 help:
 	@echo "Terraform:"
@@ -42,6 +42,7 @@ help:
 	@echo "  make inference      - Marina Watch (YOLO detection dashboard)"
 	@echo "  make florida-ai     - Florida AI site (SvelteKit + nginx)"
 	@echo "  make openclaw       - OpenClaw AI gateway (Node.js + nginx TLS)"
+	@echo "  make hemera         - Hemera Pi 5 (dual cameras + Hailo detection)"
 	@echo ""
 	@echo "Ops:"
 	@echo "  make backup         - Proxmox vzdump all containers"
@@ -107,7 +108,7 @@ homeassistant:
 gardener:
 	ansible-playbook -i scripts/terraform_inventory.py ansible-gardener/configure.yml
 
-all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns homeassistant gardener dolphin tbs panoptes openclaw florida-ai
+all-services: common tunnel monitoring uptime-kuma immich photoprism jupyter ocsirb-web ocsirb-staging omada dns homeassistant gardener dolphin tbs panoptes openclaw florida-ai hemera
 
 # --- Ops ---
 
@@ -138,3 +139,6 @@ openclaw:
 
 florida-ai:
 	$(ANSIBLE) ansible-florida-ai/configure.yml
+
+hemera:
+	$(ANSIBLE) ansible-hemera/configure.yml

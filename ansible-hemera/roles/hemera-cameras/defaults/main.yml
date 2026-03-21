@@ -1,0 +1,29 @@
+---
+# Hemera camera and detection defaults
+
+# mediamtx
+mediamtx_version: "v1.16.3"
+mediamtx_install_dir: /opt/mediamtx
+
+# Camera 0: Pi HQ (IMX477)
+cam0_width: 2028
+cam0_height: 1520
+cam0_fps: 30
+cam0_bitrate: 5000000
+cam0_hflip: false
+cam0_vflip: false
+
+# Camera 1: Arducam 64MP
+cam1_width: 4624
+cam1_height: 3472
+cam1_fps: 10
+cam1_bitrate: 8000000
+cam1_hflip: false
+cam1_vflip: false
+
+# Hailo detection
+detect_install_dir: /opt/hemera-detect
+detect_model: /usr/share/hailo-models/yolov8s_h8l.hef
+detect_confidence: "0.5"
+detect_port: 8080
+detect_rtsp_url: "rtsp://127.0.0.1:8554/cam0"

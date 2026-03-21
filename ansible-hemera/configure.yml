@@ -1,0 +1,13 @@
+---
+# ansible-hemera/configure.yml
+# Hemera: Pi 5 with dual cameras (IMX477 + Arducam 64MP) and Hailo-8 AI accelerator
+#
+# Usage:
+#   make hemera
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-hemera/configure.yml
+
+- name: Configure Hemera (dual-camera + Hailo detection)
+  hosts: hemera_hosts
+  become: true
+  roles:
+    - hemera-cameras

@@ -1,0 +1,41 @@
+# mediamtx configuration for hemera — managed by Ansible
+
+logLevel: info
+logDestinations: [stdout]
+
+api: yes
+apiAddress: :9997
+
+rtsp: yes
+rtspAddress: :8554
+
+webrtc: yes
+webrtcAddress: :8889
+
+hls: yes
+hlsAddress: :8888
+
+paths:
+  # Pi HQ Camera (IMX477) — cam0
+  cam0:
+    source: rpiCamera
+    rpiCameraWidth: {{ cam0_width }}
+    rpiCameraHeight: {{ cam0_height }}
+    rpiCameraFPS: {{ cam0_fps }}
+    rpiCameraBitrate: {{ cam0_bitrate }}
+    rpiCameraCodec: auto
+    rpiCameraHFlip: {{ cam0_hflip | lower }}
+    rpiCameraVFlip: {{ cam0_vflip | lower }}
+    rpiCameraCamID: 0
+
+  # Arducam 64MP — cam1
+  cam1:
+    source: rpiCamera
+    rpiCameraWidth: {{ cam1_width }}
+    rpiCameraHeight: {{ cam1_height }}
+    rpiCameraFPS: {{ cam1_fps }}
+    rpiCameraBitrate: {{ cam1_bitrate }}
+    rpiCameraCodec: auto
+    rpiCameraHFlip: {{ cam1_hflip | lower }}
+    rpiCameraVFlip: {{ cam1_vflip | lower }}
+    rpiCameraCamID: 1
