@@ -153,7 +153,13 @@ Tunnel tokens are stored as a sensitive Terraform output and injected into cloud
 
 ## Git Workflow
 
-The canonical repo lives on the **manager** at `/root/projects/homelab-infra`. It is a non-bare repository with `receive.denyCurrentBranch = updateInstead`, so pushes automatically update the working tree.
+The repo exists in three locations:
+
+1. **Manager** (canonical): `/root/projects/homelab-infra` on 192.168.50.28 — where Terraform and Ansible actually run
+2. **GitHub** (offsite backup): https://github.com/georgebrisco/homelab-infra (private)
+3. **Workstation** (local clone): for editing and pushing changes
+
+The manager repo is a non-bare repository with `receive.denyCurrentBranch = updateInstead`, so pushes automatically update the working tree.
 
 **Remote clone (from a workstation):**
 
@@ -218,10 +224,9 @@ For containers with persistent data (Immich, PhotoPrism, devbox), data lives on 
 5. **Bootstrap a manager LXC** (CT 107):
    - Create an Ubuntu 22.04 container manually via Proxmox UI with IP 192.168.50.28.
    - Run `bootstrap-mgmt-lxc.sh` inside it to install Terraform, Ansible, and Git.
-   - Copy your SSH key to the manager and clone the repo:
+   - Clone the repo from GitHub (the offsite backup):
      ```bash
-     git clone ssh://root@192.168.50.28/root/projects/homelab-infra  # from workstation
-     # or: git clone https://github.com/georgebrisco/homelab-infra    # from GitHub
+     git clone https://github.com/georgebrisco/homelab-infra /root/projects/homelab-infra
      ```
 6. **Populate secrets** on the manager:
    ```bash
