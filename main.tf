@@ -420,7 +420,7 @@ locals {
       swap        = 2048
       disk_gb     = 20
       reserved_ip = "192.168.50.35"
-      mac         = "bc:24:11:32:e5:c1"
+      mac         = "bc:24:11:e3:43:90"
       static      = false
       privileged  = false
       tags        = []
