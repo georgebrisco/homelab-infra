@@ -23,7 +23,7 @@ cam1_vflip: false
 
 # Hailo detection
 detect_install_dir: /opt/hemera-detect
-detect_model: /usr/share/hailo-models/yolov8s_h8l.hef
+detect_model: /usr/share/hailo-models/yolov8s_h8.hef
 detect_confidence: "0.5"
 detect_port: 8080
 detect_rtsp_url: "rtsp://127.0.0.1:8554/cam0"
