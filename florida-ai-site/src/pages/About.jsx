@@ -52,47 +52,7 @@ export default function About() {
         </div>
       </section>
 
-      <section className="timeline">
-        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '3rem' }}>
-          Our Journey
-        </h2>
-        
-        <div className="timeline-item">
-          <div className="timeline-content">
-            <h3>2024 - The Beginning</h3>
-            <p>
-              Founded Florida AI with a vision to make artificial intelligence accessible to small businesses across Florida.
-            </p>
-          </div>
-        </div>
 
-        <div className="timeline-item">
-          <div className="timeline-content">
-            <h3>Early 2025 - First Clients</h3>
-            <p>
-              Launched our AI Audit service and helped our first customers save time and boost productivity with tailored AI solutions.
-            </p>
-          </div>
-        </div>
-
-        <div className="timeline-item">
-          <div className="timeline-content">
-            <h3>Spring 2026 - Growing Strong</h3>
-            <p>
-              Expanded our team and services. Now helping dozens of small businesses across Florida harness the power of AI.
-            </p>
-          </div>
-        </div>
-
-        <div className="timeline-item">
-          <div className="timeline-content">
-            <h3>Future - Scaling Up</h3>
-            <p>
-              Building partnerships with other Florida businesses to make AI implementation even more accessible.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
