@@ -1,0 +1,23 @@
+[Unit]
+Description=Florida AI Chat API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/florida-ai-api
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/etc/florida-ai-api.env
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=florida-ai-chat
+
+[Install]
+WantedBy=multi-user.target

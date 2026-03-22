@@ -1,10 +1,12 @@
 ---
-# florida-ai — Nginx serving SvelteKit static build
+# florida-ai — Nginx serving React static build + Node.js chat API
 # Cloudflared is deployed separately via ansible-tunnel.
 
-- name: Install nginx
+- name: Install nginx and nodejs
   apt:
-    name: nginx
+    name:
+      - nginx
+      - nodejs
     state: present
     update_cache: true
 
@@ -48,3 +50,50 @@
     name: nginx
     enabled: true
     state: started
+
+# --- Chat API ---
+
+- name: Ensure chat API directory exists
+  file:
+    path: /opt/florida-ai-api
+    state: directory
+    mode: "0755"
+
+- name: Deploy chat API source files
+  copy:
+    src: "{{ item }}"
+    dest: /opt/florida-ai-api/
+    mode: "0644"
+  loop:
+    - ../../../florida-ai-site/api/server.js
+    - ../../../florida-ai-site/api/package.json
+  notify: restart florida-ai-chat
+
+- name: Install chat API npm dependencies
+  community.general.npm:
+    path: /opt/florida-ai-api
+    state: present
+  notify: restart florida-ai-chat
+
+- name: Deploy chat API environment file
+  template:
+    src: florida-ai-api.env.j2
+    dest: /etc/florida-ai-api.env
+    mode: "0600"
+  notify: restart florida-ai-chat
+
+- name: Deploy chat API systemd service
+  template:
+    src: florida-ai-chat.service.j2
+    dest: /etc/systemd/system/florida-ai-chat.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart florida-ai-chat
+
+- name: Enable and start chat API service
+  systemd:
+    name: florida-ai-chat
+    enabled: true
+    state: started
+    daemon_reload: true

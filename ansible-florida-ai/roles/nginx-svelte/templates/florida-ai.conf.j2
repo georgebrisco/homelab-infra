@@ -1,4 +1,4 @@
-# Florida AI — SvelteKit static site, managed by Ansible
+# Florida AI — React static site + chat API, managed by Ansible
 # Served via cloudflared tunnel
 server {
     listen 80;
@@ -9,21 +9,26 @@ server {
 
     include snippets/security-headers.conf;
 
-    # SvelteKit static adapter — client-side routing
-    location / {
-        try_files $uri $uri/ $uri.html /index.html;
+    # Chat API — proxy to Node.js backend on port 3001
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 5s;
     }
 
-    # Immutable hashed assets — long cache
-    location /_app/immutable/ {
+    # React client-side routing
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Hashed assets — long cache
+    location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
-    }
-
-    # Static assets
-    location /assets/ {
-        expires 7d;
-        add_header Cache-Control "public";
     }
 
     gzip on;

@@ -3,3 +3,12 @@
   systemd:
     name: nginx
     state: reloaded
+
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: restart florida-ai-chat
+  systemd:
+    name: florida-ai-chat
+    state: restarted

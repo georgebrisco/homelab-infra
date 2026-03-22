@@ -1,0 +1,4 @@
+---
+# Set your Anthropic API key here or pass via --extra-vars / ansible vault
+# Get one at https://console.anthropic.com/
+florida_ai_anthropic_api_key: ""
