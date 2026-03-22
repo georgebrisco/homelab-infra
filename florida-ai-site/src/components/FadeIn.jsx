@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export default function FadeIn({ children, delay = 0, threshold = 0.1, className = "" }) {
   const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -9,7 +10,7 @@ export default function FadeIn({ children, delay = 0, threshold = 0.1, className
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             setTimeout(() => {
-              entry.target.classList.add("visible")
+              setVisible(true)
             }, delay)
             observer.unobserve(entry.target)
           }
@@ -30,7 +31,7 @@ export default function FadeIn({ children, delay = 0, threshold = 0.1, className
   }, [delay, threshold])
 
   return (
-    <div ref={ref} className={"fade-in " + className}>
+    <div ref={ref} className={`fade-in ${visible ? 'visible' : ''} ${className}`}>
       {children}
     </div>
   )
