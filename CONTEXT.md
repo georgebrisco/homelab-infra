@@ -192,26 +192,37 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 - **Steam (Proxmox)**: PVE firewall requires explicit port rules for node_exporter. Rule in `/etc/pve/local/host.fw`: `IN ACCEPT -source 192.168.50.0/24 -p tcp -dport 9100`.
 - **Gardener**: Raspberry Pi OS Bookworm (aarch64). USB RTL-SDR dongle. rtl_433 binary pre-compiled. Logrotate with `copytruncate` to handle open file handles. SD card — watch disk usage.
 - **Panoptes**: Raspberry Pi 4B, Debian 13 (Trixie), aarch64. WiFi only (wlan0). Pi Camera Module 3 (IMX708). Camera mounted upside-down (hflip + vflip enabled). mediamtx v1.16.3 streams 1080p30 H264. PipeWire may grab the camera if a desktop session starts — mediamtx service should be running first.
-- **Hemera**: Raspberry Pi 5 8GB, Debian 13 (Trixie), aarch64. WiFi only (wlan0, MAC 88:a2:9e:09:77:a9). Hailo-8 AI accelerator on PCIe (HailoRT 4.23.0). Pi HQ camera (IMX477) on CSI cam0 — streaming via mediamtx. Arducam 64MP on CSI cam1 — driver installed but I2C probe fails (error -5, likely ribbon cable issue). Uses `admin` user (not root). 116GB SD card.
+- **Hemera**: Raspberry Pi 5 8GB, Debian 13 (Trixie), aarch64. WiFi (wlan0, MAC 88:a2:9e:09:77:a9) + eth0 (88:a2:9e:09:77:a8). Hailo-8 AI accelerator on PCIe via dual NVMe HAT (ASMedia PCIe switch, HailoRT 4.23.0). Dual cameras: Pi Camera Module 3 (IMX708) on cam0, Pi HQ (IMX477) on cam1. Uses `admin` user (not root). 116GB SD card. Requires 5V/5A PSU — failed with Dell USB-C charger, works with Lenovo 65W.
 
 ## Hemera (192.168.50.33)
 
-Raspberry Pi 5 combining camera streaming (like panoptes) with on-device AI detection (like inference), using a Hailo-8 accelerator instead of CPU-based YOLO.
+Raspberry Pi 5 combining camera streaming with on-device AI detection, using a Hailo-8 accelerator instead of CPU-based YOLO. WiFi network: Chicago.
 
-**Hardware**: Pi 5 8GB, Hailo-8 on PCIe M.2 HAT, Pi HQ camera (IMX477), Arducam 64MP (currently non-functional — I2C error).
+**Hardware**: Pi 5 8GB, Hailo-8 on PCIe M.2 dual NVMe HAT (ASMedia PCIe switch), Pi Camera Module 3 (IMX708, cam0), Pi HQ camera (IMX477, cam1). Requires proper 5V/5A USB-C PSU.
+
+**Architecture**: Direct camera capture via picamera2 with ISP dual-stream output. The Pi 5's ISP simultaneously produces a 2028x1520 main stream (for the dashboard) and a 640x640 lores stream (hardware-resized for Hailo inference). No RTSP encode/decode in the detection path. mediamtx is installed but disabled — can be re-enabled for external RTSP clients (HA, VLC).
 
 **Services**:
-- **mediamtx** (v1.16.3): RTSP streaming on :8554/cam0 (IMX477, 2028x1520@30fps). WebRTC on :8889, HLS on :8888.
-- **hemera-detect**: Flask web dashboard on :8080 with annotated MJPEG stream. Pulls RTSP from local mediamtx, runs YOLOv8s inference on Hailo-8 at ~30fps, overlays bounding boxes.
+- **hemera-detect**: Flask web dashboard on :8080 with annotated MJPEG stream + live stats panel. Direct picamera2 capture → ISP dual-stream → Hailo inference at 30fps, 13ms pipeline. Runs as root (needs camera + Hailo device access).
 - **node_exporter**: Prometheus metrics on :9100.
 
-**Detection API**: `http://hemera.homelab:8080/api/status` returns JSON with current detections, FPS, and total count.
+**Performance** (ISP dual-stream mode):
+- 30 fps, 18ms capture, 0ms preprocess (ISP-resized), 13ms Hailo inference, 13.6ms total pipeline
+- Zero buffering latency — every displayed frame is the most recent capture
 
-**Model**: `/usr/share/hailo-models/yolov8s_h8.hef` (native Hailo-8, 80 COCO classes, NMS post-processing on-device).
+**Detection API**: `http://hemera.homelab:8080/api/status` — returns JSON: fps, resolution, capture/preprocess/inference/postprocess timing, current detections with labels and confidence scores, total detection count.
 
-**Ansible role**: `ansible-hemera/` — installs Hailo packages, mediamtx, detection dashboard, node_exporter. `make hemera`.
+**Model**: `/usr/share/hailo-models/yolov8s_h8.hef` (native Hailo-8, 80 COCO classes, NMS post-processing on-device). All pre-compiled models are 640x640 input; higher-res would require custom HEF compilation via Hailo DFC.
 
-**Pending**: Fix Arducam 64MP I2C communication (check ribbon cable + 22-pin adapter). Once working, add cam1 stream to mediamtx config.
+**Ansible role**: `ansible-hemera/` — installs Hailo packages, picamera2, mediamtx, detection dashboard, node_exporter. `make hemera`.
+
+**Boot config**: `camera_auto_detect=1` with `dtparam=pciex1` and `dtparam=pciex1_gen=3` for the M.2 HAT.
+
+**Known issues**:
+- Hailo PCIe driver occasionally crashes under sustained load (`hailo_vdma_buffer_map` kernel oops), causing a reboot. Service auto-restarts cleanly.
+- Pi 5 has no hardware H264 encoder — software encoder caps RTSP streaming at 2028x1520 (9MP limit). Direct picamera2 capture bypasses this.
+
+**Auto-deploy**: Post-receive hook on manager runs `make hemera` when `ansible-hemera/` files change on push.
 
 ## Tea Blend Studio (TBS) Deployment
 
