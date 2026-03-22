@@ -460,7 +460,7 @@ locals {
       swap        = 256
       disk_gb     = 8
       reserved_ip = "192.168.50.37"
-      mac         = "bc:24:11:f4:37:a0"
+      mac         = "bc:24:11:61:7d:12"
       static      = false
       privileged  = false
       tags        = ["forgejo", "git"]
