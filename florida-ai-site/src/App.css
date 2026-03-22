@@ -214,11 +214,11 @@
 /* Hero Section */
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: 60vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-24) var(--spacing-4);
+  padding: var(--spacing-16) var(--spacing-4);
   overflow: hidden;
   background: linear-gradient(135deg, #06b6d4 0%, #0f172a 40%, #1e293b 60%, #f97316 100%);
   background-size: 300% 300%;
@@ -620,11 +620,10 @@
 
 /* About Page */
 .about-hero {
-  padding: var(--spacing-24) var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-4);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: white;
   text-align: center;
-  min-height: 50vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -746,11 +745,10 @@
 
 /* Services Page */
 .services-hero {
-  padding: var(--spacing-24) var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-4);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: white;
   text-align: center;
-  min-height: 40vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -822,11 +820,10 @@
 
 /* Contact Page */
 .contact-hero {
-  padding: var(--spacing-24) var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-4);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: white;
   text-align: center;
-  min-height: 30vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
