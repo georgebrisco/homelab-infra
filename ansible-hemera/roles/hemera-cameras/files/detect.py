@@ -25,7 +25,9 @@ COCO = ['person','bicycle','car','motorcycle','airplane','bus','train','truck','
 
 frame_lock = threading.Lock()
 latest_frame = None
-stats = {'fps': 0, 'dets': [], 'total': 0}
+stats = {'fps': 0, 'dets': [], 'total': 0,
+         'infer_ms': 0, 'preprocess_ms': 0, 'postprocess_ms': 0, 'total_ms': 0,
+         'resolution': ''}
 
 def run():
     global latest_frame
@@ -52,13 +54,25 @@ def run():
                     cap = cv2.VideoCapture(RTSP_URL)
                     continue
 
+                t_total = time.perf_counter()
                 oh, ow = frame.shape[:2]
-                img = cv2.resize(frame, (w, h)).astype(np.uint8)
-                raw = pipe.infer({inp_info.name: np.expand_dims(img, 0)})
+                stats['resolution'] = f'{ow}x{oh}'
 
+                # Preprocess
+                t0 = time.perf_counter()
+                img = cv2.resize(frame, (w, h)).astype(np.uint8)
+                t_pre = (time.perf_counter() - t0) * 1000
+
+                # Inference
+                t0 = time.perf_counter()
+                raw = pipe.infer({inp_info.name: np.expand_dims(img, 0)})
+                t_inf = (time.perf_counter() - t0) * 1000
+
+                # Postprocess + draw
+                t0 = time.perf_counter()
                 dets = []
                 for name, out_list in raw.items():
-                    batch = out_list[0]  # list of 80 per-class arrays
+                    batch = out_list[0]
                     for cls_id, cls_dets in enumerate(batch):
                         arr = np.array(cls_dets)
                         if arr.size == 0:
@@ -76,9 +90,16 @@ def run():
                             cv2.putText(frame, f'{label} {score:.0%}', (bx1,by1-8),
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
                             dets.append({'label': label, 'score': round(float(score),2)})
+                t_post = (time.perf_counter() - t0) * 1000
+                t_tot = (time.perf_counter() - t_total) * 1000
 
                 stats['dets'] = dets
                 stats['total'] += len(dets)
+                stats['preprocess_ms'] = round(t_pre, 1)
+                stats['infer_ms'] = round(t_inf, 1)
+                stats['postprocess_ms'] = round(t_post, 1)
+                stats['total_ms'] = round(t_tot, 1)
+
                 with frame_lock:
                     latest_frame = frame.copy()
                 fc += 1
@@ -98,11 +119,47 @@ def gen():
         time.sleep(0.033)
 
 HTML = '''<!DOCTYPE html><html><head><title>Hemera</title>
-<style>body{font-family:sans-serif;background:#1a1a2e;color:#eee;margin:0;padding:20px}
-h1{color:#e94560}.v{max-width:960px}img{width:100%;border-radius:8px}</style>
-</head><body><h1>Hemera &mdash; Hailo-8 Detection</h1>
-<div class="v"><img src="/stream"/></div>
-<p>YOLOv8s on Hailo-8 | Pi HQ Camera (IMX477) | <a href="/api/status" style="color:#e94560">API</a></p>
+<meta http-equiv="refresh" content="5">
+<style>
+  body { font-family: sans-serif; background: #1a1a2e; color: #eee; margin: 0; padding: 20px; }
+  h1 { color: #e94560; margin-bottom: 10px; }
+  .layout { display: flex; gap: 20px; flex-wrap: wrap; }
+  .video { flex: 3; min-width: 640px; }
+  .video img { width: 100%; border-radius: 8px; }
+  .panel { flex: 1; min-width: 220px; }
+  .card { background: #16213e; padding: 14px; border-radius: 8px; margin-bottom: 10px; }
+  .card h3 { margin: 0 0 6px; color: #e94560; font-size: 0.85em; text-transform: uppercase; }
+  .card .val { font-size: 1.4em; font-weight: bold; }
+  .card .sub { font-size: 0.8em; color: #888; margin-top: 4px; }
+  .dets { font-size: 0.9em; }
+  .dets span { background: #0f3460; padding: 3px 8px; border-radius: 4px; margin: 2px; display: inline-block; }
+  a { color: #e94560; }
+</style>
+</head><body>
+<h1>Hemera &mdash; Hailo-8 Detection</h1>
+<div class="layout">
+  <div class="video"><img src="/stream"/></div>
+  <div class="panel" id="stats"></div>
+</div>
+<script>
+async function update() {
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    const p = document.getElementById('stats');
+    p.innerHTML = `
+      <div class="card"><h3>FPS</h3><div class="val">${s.fps}</div>
+        <div class="sub">${s.resolution}</div></div>
+      <div class="card"><h3>Inference</h3><div class="val">${s.infer_ms} ms</div>
+        <div class="sub">Preprocess: ${s.preprocess_ms} ms<br>Postprocess: ${s.postprocess_ms} ms<br>Total: ${s.total_ms} ms</div></div>
+      <div class="card"><h3>Detections</h3><div class="val">${s.dets.length}</div>
+        <div class="sub">Total since start: ${s.total}</div>
+        <div class="dets">${s.dets.map(d => `<span>${d.label} ${Math.round(d.score*100)}%</span>`).join('')}</div></div>
+    `;
+  } catch(e) {}
+}
+update(); setInterval(update, 1000);
+</script>
 </body></html>'''
 
 @app.route('/')
