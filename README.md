@@ -106,6 +106,7 @@ All containers get node_exporter on :9100, scraped by Prometheus.
 | truenas | .44 | NFS storage |
 | gardener | .53 | Raspberry Pi, RTL-SDR soil sensors |
 | panoptes | .61 | Raspberry Pi, RTSP camera |
+| hemera | .33 | Raspberry Pi 5, dual cameras, Hailo-8 AI |
 
 ## Playbooks
 
@@ -289,6 +290,7 @@ homelab-infra/
 ├── ansible-tbs/                     # Tea Blend Studio (preview + production)
 ├── ansible-openclaw/                # OpenClaw AI gateway (Node.js + nginx TLS)
 ├── ansible-florida-ai/              # Florida AI site (React/Vite + nginx)
+├── ansible-hemera/                  # Hemera Pi 5 (dual cameras + Hailo-8 detection)
 ├── ansible-panoptes/                # RTSP camera streaming + timelapse
 ├── ansible-gardener/                # rtl433 + moisture-proxy (Raspberry Pi)
 ├── ansible-homeassistant/           # Home Assistant YAML config + add-ons + backup

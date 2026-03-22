@@ -176,6 +176,7 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 | truenas | .44 | bc:24:11:00:35:85 | root | storage | Immutable /usr, node_exporter at /root/bin/ |
 | gardener | .53 | 2c:cf:67:81:f4:03 | root | iot, rpi, gardener | Raspberry Pi, USB SDR, rtl_433 + moisture_proxy |
 | panoptes | .61 | d8:3a:dd:f1:37:21 | root | iot, rpi | Raspberry Pi 4B, Camera Module 3 (IMX708), RTSP streaming |
+| hemera | .33 | 88:a2:9e:09:77:a9 | admin | iot, rpi, hemera | Raspberry Pi 5 8GB, Pi HQ cam + Arducam 64MP, Hailo-8 |
 
 **Non-managed** (get DHCP + DNS only):
 
@@ -191,6 +192,26 @@ All defined in `local.containers` in `main.tf`. Roles use per-service identity n
 - **Steam (Proxmox)**: PVE firewall requires explicit port rules for node_exporter. Rule in `/etc/pve/local/host.fw`: `IN ACCEPT -source 192.168.50.0/24 -p tcp -dport 9100`.
 - **Gardener**: Raspberry Pi OS Bookworm (aarch64). USB RTL-SDR dongle. rtl_433 binary pre-compiled. Logrotate with `copytruncate` to handle open file handles. SD card — watch disk usage.
 - **Panoptes**: Raspberry Pi 4B, Debian 13 (Trixie), aarch64. WiFi only (wlan0). Pi Camera Module 3 (IMX708). Camera mounted upside-down (hflip + vflip enabled). mediamtx v1.16.3 streams 1080p30 H264. PipeWire may grab the camera if a desktop session starts — mediamtx service should be running first.
+- **Hemera**: Raspberry Pi 5 8GB, Debian 13 (Trixie), aarch64. WiFi only (wlan0, MAC 88:a2:9e:09:77:a9). Hailo-8 AI accelerator on PCIe (HailoRT 4.23.0). Pi HQ camera (IMX477) on CSI cam0 — streaming via mediamtx. Arducam 64MP on CSI cam1 — driver installed but I2C probe fails (error -5, likely ribbon cable issue). Uses `admin` user (not root). 116GB SD card.
+
+## Hemera (192.168.50.33)
+
+Raspberry Pi 5 combining camera streaming (like panoptes) with on-device AI detection (like inference), using a Hailo-8 accelerator instead of CPU-based YOLO.
+
+**Hardware**: Pi 5 8GB, Hailo-8 on PCIe M.2 HAT, Pi HQ camera (IMX477), Arducam 64MP (currently non-functional — I2C error).
+
+**Services**:
+- **mediamtx** (v1.16.3): RTSP streaming on :8554/cam0 (IMX477, 2028x1520@30fps). WebRTC on :8889, HLS on :8888.
+- **hemera-detect**: Flask web dashboard on :8080 with annotated MJPEG stream. Pulls RTSP from local mediamtx, runs YOLOv8s inference on Hailo-8 at ~30fps, overlays bounding boxes.
+- **node_exporter**: Prometheus metrics on :9100.
+
+**Detection API**: `http://hemera.homelab:8080/api/status` returns JSON with current detections, FPS, and total count.
+
+**Model**: `/usr/share/hailo-models/yolov8s_h8.hef` (native Hailo-8, 80 COCO classes, NMS post-processing on-device).
+
+**Ansible role**: `ansible-hemera/` — installs Hailo packages, mediamtx, detection dashboard, node_exporter. `make hemera`.
+
+**Pending**: Fix Arducam 64MP I2C communication (check ribbon cable + 22-pin adapter). Once working, add cam1 stream to mediamtx config.
 
 ## Tea Blend Studio (TBS) Deployment
 
