@@ -10,7 +10,7 @@ export default function Services() {
       title: 'AI Strategy Audit',
       icon: '🔍',
       description: 'We analyze your business processes and identify where AI can save you time and money.',
-      details: 'Includes a 45-minute consultation, process analysis, and a custom report with specific recommendations.'
+      details: 'Includes a 1-hour consultation, process analysis, and a custom report with specific recommendations.'
     },
     {
       id: 'setup',

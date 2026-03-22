@@ -48,6 +48,30 @@ export default function About() {
                 We stick around. Ongoing support means you're never left alone figuring things out.
               </p>
             </FadeIn>
+
+            <FadeIn delay={300} className="value-card">
+              <div className="value-icon">🔒</div>
+              <h3>Privacy First</h3>
+              <p>
+                Your business data stays yours. We only recommend tools and practices that keep your information secure.
+              </p>
+            </FadeIn>
+
+            <FadeIn delay={400} className="value-card">
+              <div className="value-icon">⚡</div>
+              <h3>Fast to Value</h3>
+              <p>
+                We get you up and running quickly. Most clients see meaningful time savings within the first two weeks.
+              </p>
+            </FadeIn>
+
+            <FadeIn delay={500} className="value-card">
+              <div className="value-icon">🎯</div>
+              <h3>Right Tool, Right Job</h3>
+              <p>
+                We're tool-agnostic. We recommend what actually fits your workflow, not what's most popular or profitable for us.
+              </p>
+            </FadeIn>
           </div>
         </div>
       </section>
