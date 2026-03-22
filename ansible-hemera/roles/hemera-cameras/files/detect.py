@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Hemera: Hailo-8 accelerated object detection dashboard."""
+"""Hemera: Hailo-8 accelerated object detection with direct camera capture.
+
+Uses picamera2 for zero-copy frame capture from the IMX477, eliminating the
+RTSP encode/decode round-trip. Frames go directly from the camera ISP to
+Hailo inference. Serves an MJPEG dashboard on :8080.
+"""
 import cv2, numpy as np, threading, time, os, json
-from flask import Flask, Response, render_template_string
+from flask import Flask, Response
+from picamera2 import Picamera2
 from hailo_platform import (HEF, VDevice, HailoStreamInterface,
     ConfigureParams, InputVStreamParams, OutputVStreamParams,
     InferVStreams, FormatType)
 
 app = Flask(__name__)
-RTSP_URL = os.environ.get('RTSP_URL', 'rtsp://127.0.0.1:8554/cam0')
 MODEL_PATH = os.environ.get('MODEL_PATH', '/usr/share/hailo-models/yolov8s_h8.hef')
 CONFIDENCE = float(os.environ.get('CONFIDENCE', '0.5'))
 PORT = int(os.environ.get('PORT', '8080'))
+CAM_WIDTH = int(os.environ.get('CAM_WIDTH', '2028'))
+CAM_HEIGHT = int(os.environ.get('CAM_HEIGHT', '1520'))
+CAM_ID = int(os.environ.get('CAM_ID', '0'))
 
 COCO = ['person','bicycle','car','motorcycle','airplane','bus','train','truck','boat',
     'traffic light','fire hydrant','stop sign','parking meter','bench','bird','cat',
@@ -27,10 +35,22 @@ frame_lock = threading.Lock()
 latest_frame = None
 stats = {'fps': 0, 'dets': [], 'total': 0,
          'infer_ms': 0, 'preprocess_ms': 0, 'postprocess_ms': 0, 'total_ms': 0,
-         'resolution': ''}
+         'capture_ms': 0, 'resolution': '', 'mode': 'direct (picamera2)'}
 
 def run():
     global latest_frame
+
+    # Init camera — direct capture, no RTSP intermediary
+    cam = Picamera2(CAM_ID)
+    config = cam.create_still_configuration(
+        main={"size": (CAM_WIDTH, CAM_HEIGHT), "format": "RGB888"},
+        buffer_count=2
+    )
+    cam.configure(config)
+    cam.start()
+    print(f'Camera {CAM_ID} started: {CAM_WIDTH}x{CAM_HEIGHT} direct capture')
+
+    # Init Hailo
     hef = HEF(MODEL_PATH)
     dev = VDevice()
     params = ConfigureParams.create_from_hef(hef, interface=HailoStreamInterface.PCIe)
@@ -41,43 +61,26 @@ def run():
     h, w = inp_info.shape[0], inp_info.shape[1]
     print(f'Model: {MODEL_PATH} input={w}x{h} UINT8')
 
-    def open_rtsp():
-        c = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
-        c.set(cv2.CAP_PROP_BUFFERSIZE, 1)           # minimal frame buffer
-        c.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)
-        c.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)
-        return c
-
-    cap = open_rtsp()
     fc, ft = 0, time.time()
 
     with ng.activate():
         with InferVStreams(ng, inp_params, out_params) as pipe:
             while True:
-                # Drain buffer — grab up to 5 queued frames, only decode the latest
-                ret = cap.grab()
-                if not ret:
-                    time.sleep(0.5)
-                    cap.release()
-                    cap = open_rtsp()
-                    continue
-                for _ in range(2):
-                    if not cap.grab():
-                        break
-                ret, frame = cap.retrieve()
-                if not ret:
-                    continue
+                # Direct capture — no RTSP, no decode, no buffer drain needed
+                t0 = time.perf_counter()
+                frame = cam.capture_array()
+                t_cap = (time.perf_counter() - t0) * 1000
 
                 t_total = time.perf_counter()
                 oh, ow = frame.shape[:2]
                 stats['resolution'] = f'{ow}x{oh}'
 
-                # Preprocess
+                # Preprocess — just resize to model input
                 t0 = time.perf_counter()
-                img = cv2.resize(frame, (w, h)).astype(np.uint8)
+                img = cv2.resize(frame, (w, h))
                 t_pre = (time.perf_counter() - t0) * 1000
 
-                # Inference
+                # Inference on Hailo
                 t0 = time.perf_counter()
                 raw = pipe.infer({inp_info.name: np.expand_dims(img, 0)})
                 t_inf = (time.perf_counter() - t0) * 1000
@@ -109,13 +112,15 @@ def run():
 
                 stats['dets'] = dets
                 stats['total'] += len(dets)
+                stats['capture_ms'] = round(t_cap, 1)
                 stats['preprocess_ms'] = round(t_pre, 1)
                 stats['infer_ms'] = round(t_inf, 1)
                 stats['postprocess_ms'] = round(t_post, 1)
                 stats['total_ms'] = round(t_tot, 1)
 
+                # Convert RGB to BGR for JPEG encoding
                 with frame_lock:
-                    latest_frame = frame.copy()
+                    latest_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 fc += 1
                 if time.time() - ft >= 1:
                     stats['fps'] = round(fc/(time.time()-ft), 1)
@@ -133,7 +138,6 @@ def gen():
         time.sleep(0.033)
 
 HTML = '''<!DOCTYPE html><html><head><title>Hemera</title>
-<meta http-equiv="refresh" content="5">
 <style>
   body { font-family: sans-serif; background: #1a1a2e; color: #eee; margin: 0; padding: 20px; }
   h1 { color: #e94560; margin-bottom: 10px; }
@@ -163,9 +167,9 @@ async function update() {
     const p = document.getElementById('stats');
     p.innerHTML = `
       <div class="card"><h3>FPS</h3><div class="val">${s.fps}</div>
-        <div class="sub">${s.resolution}</div></div>
-      <div class="card"><h3>Inference</h3><div class="val">${s.infer_ms} ms</div>
-        <div class="sub">Preprocess: ${s.preprocess_ms} ms<br>Postprocess: ${s.postprocess_ms} ms<br>Total: ${s.total_ms} ms</div></div>
+        <div class="sub">${s.resolution} (${s.mode})</div></div>
+      <div class="card"><h3>Pipeline</h3><div class="val">${s.total_ms} ms</div>
+        <div class="sub">Capture: ${s.capture_ms} ms<br>Preprocess: ${s.preprocess_ms} ms<br>Inference: ${s.infer_ms} ms<br>Postprocess: ${s.postprocess_ms} ms</div></div>
       <div class="card"><h3>Detections</h3><div class="val">${s.dets.length}</div>
         <div class="sub">Total since start: ${s.total}</div>
         <div class="dets">${s.dets.map(d => `<span>${d.label} ${Math.round(d.score*100)}%</span>`).join('')}</div></div>
