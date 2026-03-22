@@ -59,6 +59,12 @@
     state: directory
     mode: "0755"
 
+- name: Ensure SQLite data directory exists
+  file:
+    path: /var/lib/florida-ai-chat
+    state: directory
+    mode: "0755"
+
 - name: Deploy chat API source files
   copy:
     src: "{{ item }}"

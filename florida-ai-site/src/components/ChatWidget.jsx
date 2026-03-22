@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 
 const INITIAL_MESSAGE = {
   role: 'assistant',
   content: "Hi! I'm here to help you figure out if AI could make a real difference for your business. What kind of work do you do?"
 }
 
+function generateSessionId() {
+  return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
 export default function ChatWidget() {
+  const sessionId = useMemo(() => generateSessionId(), [])
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([INITIAL_MESSAGE])
   const [input, setInput] = useState('')
@@ -36,7 +41,7 @@ export default function ChatWidget() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: updated })
+        body: JSON.stringify({ messages: updated, sessionId })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
