@@ -88,3 +88,11 @@ ha_battery_mobile_sensors:
     name: George (Samsung)
   - entity_id: sensor.rosie_battery_level
     name: Rosie
+
+# --- Presence tracking ---
+# Roseanna is not currently sharing location so always appears home.
+# Temporarily tracking George only until Roseanna re-enables location sharing.
+# To restore: remove this block (defaults/main.yml has the full two-person list).
+ha_persons:
+  - entity_id: person.george_brisco
+    name: George
