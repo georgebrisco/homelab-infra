@@ -1,6 +1,16 @@
 ---
 # Deploy Forgejo as a systemd service (binary, no Docker)
 
+# --- Prerequisites ---
+- name: Install required packages
+  apt:
+    name:
+      - git
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+
 # --- System user ---
 - name: Create forgejo system group
   group:
@@ -78,7 +88,7 @@
     dest: "{{ forgejo_config_dir }}/app.ini"
     owner: root
     group: "{{ forgejo_group }}"
-    mode: "0640"
+    mode: "0660"
   vars:
     forgejo_secret_key: "{{ forgejo_secret_key_gen.stdout }}"
     forgejo_internal_token: "{{ forgejo_internal_token_gen.stdout }}"
