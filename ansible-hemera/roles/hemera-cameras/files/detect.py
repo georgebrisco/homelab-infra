@@ -41,17 +41,31 @@ def run():
     h, w = inp_info.shape[0], inp_info.shape[1]
     print(f'Model: {MODEL_PATH} input={w}x{h} UINT8')
 
-    cap = cv2.VideoCapture(RTSP_URL)
+    def open_rtsp():
+        c = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
+        c.set(cv2.CAP_PROP_BUFFERSIZE, 1)           # minimal frame buffer
+        c.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)
+        c.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)
+        return c
+
+    cap = open_rtsp()
     fc, ft = 0, time.time()
 
     with ng.activate():
         with InferVStreams(ng, inp_params, out_params) as pipe:
             while True:
-                ret, frame = cap.read()
+                # Drain buffer — grab up to 5 queued frames, only decode the latest
+                ret = cap.grab()
                 if not ret:
                     time.sleep(0.5)
                     cap.release()
-                    cap = cv2.VideoCapture(RTSP_URL)
+                    cap = open_rtsp()
+                    continue
+                for _ in range(2):
+                    if not cap.grab():
+                        break
+                ret, frame = cap.retrieve()
+                if not ret:
                     continue
 
                 t_total = time.perf_counter()
