@@ -56,7 +56,6 @@ output "cloudflare_tunnels" {
     preview_site    = cloudflare_zero_trust_tunnel_cloudflared.preview_site.id
     production_site = cloudflare_zero_trust_tunnel_cloudflared.production_site.id
     dolphin         = cloudflare_zero_trust_tunnel_cloudflared.dolphin.id
-    forgejo         = cloudflare_zero_trust_tunnel_cloudflared.forgejo.id
   }
 }
 
@@ -74,6 +73,5 @@ output "cloudflare_tunnel_tokens" {
     production_site = cloudflare_zero_trust_tunnel_cloudflared.production_site.tunnel_token
     dolphin         = cloudflare_zero_trust_tunnel_cloudflared.dolphin.tunnel_token
     florida_ai      = cloudflare_zero_trust_tunnel_cloudflared.florida_ai.tunnel_token
-    forgejo         = cloudflare_zero_trust_tunnel_cloudflared.forgejo.tunnel_token
   }
 }

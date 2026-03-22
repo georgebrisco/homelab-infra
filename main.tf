@@ -468,7 +468,7 @@ locals {
       firewall    = false
       console     = false
       dns         = local.dns_servers_default
-      roles       = ["forgejo", "tunnel"]
+      roles       = ["forgejo"]
     }
   }
 
@@ -969,47 +969,4 @@ resource "cloudflare_record" "brightpelican_www" {
   content = "${cloudflare_zero_trust_tunnel_cloudflared.florida_ai.id}.cfargotunnel.com"
   proxied = true
   comment = "bright pelican www tunnel"
-}
-
-# =============================================================================
-# Cloudflare tunnel — Forgejo (self-hosted git)
-# =============================================================================
-
-resource "random_password" "forgejo_tunnel_secret" {
-  length  = 32
-  special = false
-}
-
-resource "cloudflare_zero_trust_tunnel_cloudflared" "forgejo" {
-  account_id = var.cloudflare_account_id
-  name       = "forgejo"
-  secret     = base64sha256(random_password.forgejo_tunnel_secret.result)
-
-  lifecycle {
-    ignore_changes = [secret]
-  }
-}
-
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "forgejo" {
-  account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.forgejo.id
-
-  config {
-    ingress_rule {
-      hostname = "git.${var.brisco_domain}"
-      service  = "http://localhost:3000"
-    }
-    ingress_rule {
-      service = "http_status:404"
-    }
-  }
-}
-
-resource "cloudflare_record" "forgejo" {
-  zone_id = var.brisco_zone_id
-  name    = "git"
-  type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.forgejo.id}.cfargotunnel.com"
-  proxied = true
-  comment = "forgejo git server tunnel"
 }
