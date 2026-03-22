@@ -1,0 +1,24 @@
+---
+# Deploy Forgejo git server
+#
+# Usage:
+#   cd /root/projects/homelab-infra
+#   ansible-playbook -i scripts/terraform_inventory.py ansible-forgejo/configure.yml
+#
+# After first deploy, create the admin account:
+#   ssh root@forgejo forgejo admin user create \
+#     --username george --password '<password>' \
+#     --email george@brisco.org.uk --admin \
+#     --config /etc/forgejo/app.ini
+#
+# Then import homelab-infra:
+#   On manager: cd /root/projects && git clone --bare homelab-infra homelab-infra.git
+#   On forgejo: forgejo admin repo migrate ... (or push via git remote)
+#   Or: just git push to the new Forgejo remote after creating the repo via the UI.
+
+- name: Deploy Forgejo git server
+  hosts: forgejo_hosts
+  gather_facts: true
+
+  roles:
+    - role: forgejo

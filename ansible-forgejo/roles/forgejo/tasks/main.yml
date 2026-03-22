@@ -1,0 +1,114 @@
+---
+# Deploy Forgejo as a systemd service (binary, no Docker)
+
+# --- System user ---
+- name: Create forgejo system group
+  group:
+    name: "{{ forgejo_group }}"
+    system: true
+
+- name: Create forgejo system user
+  user:
+    name: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    system: true
+    shell: /bin/bash
+    home: "{{ forgejo_home }}"
+    create_home: true
+
+# --- Directories ---
+- name: Create forgejo directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(forgejo_user) }}"
+    group: "{{ forgejo_group }}"
+    mode: "{{ item.mode | default('0750') }}"
+  loop:
+    - { path: "{{ forgejo_work_path }}" }
+    - { path: "{{ forgejo_work_path }}/custom" }
+    - { path: "{{ forgejo_work_path }}/custom/templates" }
+    - { path: "{{ forgejo_repos_dir }}" }
+    - { path: "{{ forgejo_log_dir }}" }
+    - { path: "{{ forgejo_config_dir }}", owner: root, mode: "0750" }
+
+# --- Binary ---
+- name: Check if forgejo is installed
+  stat:
+    path: "{{ forgejo_install_dir }}/forgejo"
+  register: forgejo_binary
+
+- name: Check installed forgejo version
+  command: "{{ forgejo_install_dir }}/forgejo --version"
+  register: forgejo_installed_version
+  changed_when: false
+  when: forgejo_binary.stat.exists
+
+- name: Download forgejo binary
+  get_url:
+    url: "https://codeberg.org/forgejo/forgejo/releases/download/v{{ forgejo_version }}/forgejo-{{ forgejo_version }}-linux-{{ forgejo_arch }}"
+    dest: "{{ forgejo_install_dir }}/forgejo"
+    mode: "0755"
+    owner: root
+    group: root
+    force: "{{ not forgejo_binary.stat.exists or forgejo_version not in (forgejo_installed_version.stdout | default('')) }}"
+  register: forgejo_downloaded
+  notify: restart forgejo
+
+# --- Secrets (generate once, never overwrite) ---
+- name: Generate SECRET_KEY if not already set
+  command: "{{ forgejo_install_dir }}/forgejo generate secret SECRET_KEY"
+  register: forgejo_secret_key_gen
+  changed_when: true
+
+- name: Generate INTERNAL_TOKEN if not already set
+  command: "{{ forgejo_install_dir }}/forgejo generate secret INTERNAL_TOKEN"
+  register: forgejo_internal_token_gen
+  changed_when: true
+
+- name: Check if app.ini already exists
+  stat:
+    path: "{{ forgejo_config_dir }}/app.ini"
+  register: forgejo_app_ini
+
+# Deploy app.ini only on first run — prevents overwriting live secrets
+- name: Deploy app.ini (first install only)
+  template:
+    src: app.ini.j2
+    dest: "{{ forgejo_config_dir }}/app.ini"
+    owner: root
+    group: "{{ forgejo_group }}"
+    mode: "0640"
+  vars:
+    forgejo_secret_key: "{{ forgejo_secret_key_gen.stdout }}"
+    forgejo_internal_token: "{{ forgejo_internal_token_gen.stdout }}"
+  when: not forgejo_app_ini.stat.exists
+  notify: restart forgejo
+
+# --- Systemd service ---
+- name: Deploy forgejo systemd service
+  template:
+    src: forgejo.service.j2
+    dest: /etc/systemd/system/forgejo.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart forgejo
+
+- name: Enable and start forgejo
+  systemd:
+    name: forgejo
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for forgejo to be ready
+  uri:
+    url: "http://localhost:{{ forgejo_http_port }}"
+    status_code: [200, 302]
+  register: forgejo_health
+  until: forgejo_health.status in [200, 302]
+  retries: 12
+  delay: 5

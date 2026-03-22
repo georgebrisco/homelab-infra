@@ -1,0 +1,17 @@
+# Normalise all text files to LF in the repo; check out as LF on all platforms.
+# This prevents the "200 files modified" noise when cloning on Windows.
+* text=auto eol=lf
+
+# Explicitly binary — never diff or convert
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.gz   binary
+*.tar  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary

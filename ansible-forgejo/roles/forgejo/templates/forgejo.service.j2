@@ -1,0 +1,24 @@
+# Managed by Ansible — do not edit manually
+# Source: ansible-forgejo/roles/forgejo/templates/forgejo.service.j2
+
+[Unit]
+Description=Forgejo (self-hosted git service)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ forgejo_user }}
+Group={{ forgejo_group }}
+WorkingDirectory={{ forgejo_work_path }}
+ExecStart={{ forgejo_install_dir }}/forgejo web --config {{ forgejo_config_dir }}/app.ini
+Restart=on-failure
+RestartSec=5s
+Environment=FORGEJO_WORK_DIR={{ forgejo_work_path }}
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

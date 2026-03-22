@@ -1,0 +1,58 @@
+; Managed by Ansible — do not edit manually
+; Source: ansible-forgejo/roles/forgejo/templates/app.ini.j2
+
+APP_NAME = {{ forgejo_app_name }}
+RUN_USER = {{ forgejo_user }}
+WORK_PATH = {{ forgejo_work_path }}
+
+[server]
+PROTOCOL         = http
+HTTP_ADDR        = 0.0.0.0
+HTTP_PORT        = {{ forgejo_http_port }}
+DOMAIN           = {{ forgejo_domain }}
+ROOT_URL         = {{ forgejo_root_url }}
+; SSH is handled directly on port 22 by the git user; cloudflared handles HTTPS
+SSH_DOMAIN       = {{ forgejo_domain }}
+SSH_PORT         = {{ forgejo_ssh_port }}
+SSH_LISTEN_PORT  = {{ forgejo_ssh_listen_port }}
+DISABLE_SSH      = false
+; Advertise SSH clone URLs; HTTPS clone also works via the tunnel
+START_SSH_SERVER = false
+
+[database]
+DB_TYPE  = {{ forgejo_db_type }}
+PATH     = {{ forgejo_db_path }}
+
+[repository]
+ROOT = {{ forgejo_repos_dir }}
+
+[security]
+; Locks the install page — Ansible has already configured everything
+INSTALL_LOCK        = {{ forgejo_install_lock | lower }}
+SECRET_KEY          = {{ forgejo_secret_key }}
+INTERNAL_TOKEN      = {{ forgejo_internal_token }}
+; Passwords hashed with argon2 by default in Forgejo
+
+[service]
+DISABLE_REGISTRATION              = {{ forgejo_disable_registration | lower }}
+REQUIRE_SIGNIN_VIEW               = {{ forgejo_require_signin | lower }}
+ENABLE_NOTIFY_MAIL                = false
+DEFAULT_KEEP_EMAIL_PRIVATE        = true
+DEFAULT_ALLOW_CREATE_ORGANIZATION = false
+
+[mailer]
+ENABLED = false
+
+[log]
+MODE      = file
+LEVEL     = info
+ROOT_PATH = {{ forgejo_log_dir }}
+
+[cache]
+ADAPTER = memory
+
+[session]
+PROVIDER = file
+
+[picture]
+DISABLE_GRAVATAR = true
