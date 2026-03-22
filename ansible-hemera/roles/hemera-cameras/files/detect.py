@@ -35,22 +35,12 @@ frame_lock = threading.Lock()
 latest_frame = None
 stats = {'fps': 0, 'dets': [], 'total': 0,
          'infer_ms': 0, 'preprocess_ms': 0, 'postprocess_ms': 0, 'total_ms': 0,
-         'capture_ms': 0, 'resolution': '', 'mode': 'direct (picamera2)'}
+         'capture_ms': 0, 'resolution': '', 'mode': 'direct dual-stream (ISP resize)'}
 
 def run():
     global latest_frame
 
-    # Init camera — direct capture, no RTSP intermediary
-    cam = Picamera2(CAM_ID)
-    config = cam.create_still_configuration(
-        main={"size": (CAM_WIDTH, CAM_HEIGHT), "format": "RGB888"},
-        buffer_count=2
-    )
-    cam.configure(config)
-    cam.start()
-    print(f'Camera {CAM_ID} started: {CAM_WIDTH}x{CAM_HEIGHT} direct capture')
-
-    # Init Hailo
+    # Init Hailo first to get model input dimensions
     hef = HEF(MODEL_PATH)
     dev = VDevice()
     params = ConfigureParams.create_from_hef(hef, interface=HailoStreamInterface.PCIe)
@@ -61,24 +51,35 @@ def run():
     h, w = inp_info.shape[0], inp_info.shape[1]
     print(f'Model: {MODEL_PATH} input={w}x{h} UINT8')
 
+    # Init camera with dual-stream: main for display, lores for inference
+    cam = Picamera2(CAM_ID)
+    config = cam.create_video_configuration(
+        main={"size": (CAM_WIDTH, CAM_HEIGHT), "format": "RGB888"},
+        lores={"size": (w, h), "format": "RGB888"},
+        buffer_count=2
+    )
+    cam.configure(config)
+    cam.start()
+    print(f'Camera {CAM_ID}: main={CAM_WIDTH}x{CAM_HEIGHT}, lores={w}x{h} (ISP-resized)')
+
     fc, ft = 0, time.time()
 
     with ng.activate():
         with InferVStreams(ng, inp_params, out_params) as pipe:
             while True:
-                # Direct capture — no RTSP, no decode, no buffer drain needed
+                # Dual-stream capture: ISP gives us both sizes simultaneously
                 t0 = time.perf_counter()
-                frame = cam.capture_array()
+                request = cam.capture_request()
+                frame = request.make_array("main")   # 2028x1520 for display
+                img = request.make_array("lores")     # 640x640 for Hailo — ISP-resized
+                request.release()
                 t_cap = (time.perf_counter() - t0) * 1000
 
                 t_total = time.perf_counter()
                 oh, ow = frame.shape[:2]
                 stats['resolution'] = f'{ow}x{oh}'
 
-                # Preprocess — just resize to model input
-                t0 = time.perf_counter()
-                img = cv2.resize(frame, (w, h))
-                t_pre = (time.perf_counter() - t0) * 1000
+                t_pre = 0.0  # no CPU resize needed — ISP did it
 
                 # Inference on Hailo
                 t0 = time.perf_counter()
